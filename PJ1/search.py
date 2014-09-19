@@ -84,6 +84,31 @@ def breadthFirstSearch(problem):
     "*** YOUR CODE HERE ***"
     util.raiseNotDefined()
 
+def depthLimitedSearch(problem, maxDepth):
+    """
+    Search the deepest nodes in the search tree first. Only search to indicated depth.
+    """
+    #closedList = set()
+    lifo = util.Stack()
+
+    startState = problem.getStartState()
+    #closedList.add(startState)
+    lifo.push((startState,[],1))
+
+    while not lifo.isEmpty():
+        (state,actions,depth) = lifo.pop() #to be expanded next
+        #if state in closedList: #if in closed list, aka already expanded, move on
+         #   continue
+        if problem.isGoalState(state): #if reached goal state, done!
+            return actions
+        #closedList.add(state)
+        if depth < maxDepth: #continue going deeper
+            successors = problem.getSuccessors(state);
+            for (state,action,cost) in successors:
+                lifo.push((state,actions + [action],depth + 1))
+    return None
+
+
 def nullHeuristic(state, problem=None):
     """
     A heuristic function estimates the cost from the current state to the nearest
@@ -98,7 +123,12 @@ def iterativeDeepeningSearch(problem):
     Begin with a depth of 1 and increment depth by 1 at every step.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    depth = 1
+    solution = None
+    while solution == None:
+        solution = depthLimitedSearch(problem,depth)
+        depth += 1
+    return solution
 
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
