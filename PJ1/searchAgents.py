@@ -281,7 +281,6 @@ class CornersProblem(search.SearchProblem):
         Returns whether this search state is a goal state of the problem.
         """
         "*** YOUR CODE HERE ***"
-        #util.raiseNotDefined()
 	(position, unvisitedCorners) = state
 	if (unvisitedCorners == []):
 	  return True
