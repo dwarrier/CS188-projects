@@ -336,6 +336,16 @@ class CornersProblem(search.SearchProblem):
             if self.walls[x][y]: return 999999
         return len(actions)
 
+# returns whether position (x,y) is a leaf
+# node in min spanning tree MST.
+def isLeafCorner(edgeList, corner):
+  # position is leaf if it only shows up once
+  # in MST.
+  count = 0
+  for edge in edgeList:
+    if corner in edge:
+      count += 1
+  return count == 1
 
 def cornersHeuristic(state, problem):
     """
@@ -356,9 +366,10 @@ def cornersHeuristic(state, problem):
     "*** YOUR CODE HERE ***"
     # Approach 1: add minimum manhattan distances between remaining corners (lazy min spanning tree)
     (currentPosition, unvisitedCorners) = state
+    # min spanning tree contains list of position pairs that
+    # are edges in the tree.
     total_dist = 0
     cornerEdges = [] # paths between corners
-    pathsToCorners = [] # paths to nearest corner from curr pos
     if unvisitedCorners == []:
       return 0
     if len(unvisitedCorners) == 1:
@@ -367,14 +378,19 @@ def cornersHeuristic(state, problem):
     for i in range(l):
       for j in range(i+1,l):
         cornerEdges.append((unvisitedCorners[i], unvisitedCorners[j]))
-    for i in range(l):
-      pathsToCorners.append((currentPosition, unvisitedCorners[i]))
-    # add up min edge lengths
-    minCornerEdges = sorted(cornerEdges, key=lambda x : util.manhattanDistance(x[0],x[1]))
-    minPathToCorner = min(pathsToCorners, key=lambda x : util.manhattanDistance(x[0],x[1]))
-    for i in range(len(unvisitedCorners)-1):
-      total_dist += util.manhattanDistance(minCornerEdges[i][0], minCornerEdges[i][1])
-    return total_dist + util.manhattanDistance(minPathToCorner[0], minPathToCorner[1])
+    # make MST
+    minCornerEdges = sorted(cornerEdges, key=lambda x : util.manhattanDistance(x[0],x[1]))[:len(unvisitedCorners)-1]
+
+    if len(unvisitedCorners) == 3:
+      leafCorners = filter(lambda x : isLeafCorner(minCornerEdges, x), unvisitedCorners)
+    else:
+      leafCorners = unvisitedCorners[:]
+
+    # find min path to leaf corner
+    minPathToLeafCorner = min([(currentPosition, i) for i in leafCorners], key=lambda x : util.manhattanDistance(x[0],x[1]))
+    for edge in minCornerEdges:
+      total_dist += util.manhattanDistance(edge[0], edge[1])
+    return total_dist + util.manhattanDistance(minPathToLeafCorner[0], minPathToLeafCorner[1])
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
