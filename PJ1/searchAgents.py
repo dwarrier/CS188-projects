@@ -357,7 +357,8 @@ def cornersHeuristic(state, problem):
     # Approach 1: add minimum manhattan distances between remaining corners (lazy min spanning tree)
     (currentPosition, unvisitedCorners) = state
     total_dist = 0
-    edges = []
+    cornerEdges = [] # paths between corners
+    pathsToCorners = [] # paths to nearest corner from curr pos
     if unvisitedCorners == []:
       return 0
     if len(unvisitedCorners) == 1:
@@ -365,12 +366,15 @@ def cornersHeuristic(state, problem):
     l = len(unvisitedCorners)
     for i in range(l):
       for j in range(i+1,l):
-        edges.append((unvisitedCorners[i], unvisitedCorners[j]))
+        cornerEdges.append((unvisitedCorners[i], unvisitedCorners[j]))
+    for i in range(l):
+      pathsToCorners.append((currentPosition, unvisitedCorners[i]))
     # add up min edge lengths
-    min_edges = sorted(edges, key=lambda x : util.manhattanDistance(x[0],x[1]))
+    minCornerEdges = sorted(cornerEdges, key=lambda x : util.manhattanDistance(x[0],x[1]))
+    minPathToCorner = min(pathsToCorners, key=lambda x : util.manhattanDistance(x[0],x[1]))
     for i in range(len(unvisitedCorners)-1):
-      total_dist += util.manhattanDistance(min_edges[i][0], min_edges[i][1])
-    return total_dist
+      total_dist += util.manhattanDistance(minCornerEdges[i][0], minCornerEdges[i][1])
+    return total_dist + util.manhattanDistance(minPathToCorner[0], minPathToCorner[1])
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -464,6 +468,33 @@ def foodHeuristic(state, problem):
     """
     position, foodGrid = state
     "*** YOUR CODE HERE ***"
+    # Approach 1: take the leftmost and rightmost food
+    # pellets and return the distance between them.
+    # leftmost ties are broken by lowest y coordinate,
+    # rightmost by highest.
+    '''
+    if foodGrid.count() == 0:
+      print("DONE")
+      return 0
+    foodCoord = foodGrid.asList()
+    '''
+    '''
+    if len(foodCoord) == 1:
+      print "ONE MORE", util.manhattanDistance(position, foodCoord[0])
+      return util.manhattanDistance(position, foodCoord[0])
+    leftmost = min(foodCoord, key=lambda x : x[0])
+    rightmost = max(foodCoord, key=lambda x : x[0])
+    if leftmost == rightmost:
+      # we know that there are at least two pellets still
+      # on the board, so we use highest and lowest now.
+    #print leftmost, rightmost, util.manhattanDistance(leftmost, rightmost), foodCoord, len(foodCoord)
+      highest = max(foodCoord, key=lambda x : x[1])
+      lowest = min(foodCoord, key=lambda x : x[1])
+      print "using high low", highest, lowest, foodCoord
+      return util.manhattanDistance(highest, lowest)
+    print leftmost, rightmost, util.manhattanDistance(leftmost, rightmost), foodCoord
+    return util.manhattanDistance(leftmost, rightmost)
+    '''
     return 0
 
 def mazeDistance(point1, point2, gameState):
