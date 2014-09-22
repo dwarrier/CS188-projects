@@ -87,7 +87,17 @@ class ReflexAgent(Agent):
 	    total += 50 
 	  if (ghost.getPosition() == newPos):
 	    total += min
-	return total + successorGameState.getScore()
+
+	countCloseFood = 0
+	xlen = len(newFood[:][0])
+	ylen = len(newFood[0][:])
+	for x in range(xlen):
+	  for y in range(ylen):
+	    if newFood[x][y] == True:
+	      distance = util.manhattanDistance((x,y),newPos)
+	      if distance == 1:
+	        countCloseFood += 5 
+	return total + countCloseFood + successorGameState.getScore()
 	 
 	'''
 	for index, ghost in enumerate(newGhostStates):
