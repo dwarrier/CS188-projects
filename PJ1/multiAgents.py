@@ -100,24 +100,11 @@ class ReflexAgent(Agent):
 
 	#countCloseFood = 0
 	closestFood = 999999 
-	'''
-	xlen = len(newFood[:][0])
-	ylen = len(newFood[0][:])
-	for x in range(xlen):
-	  for y in range(ylen):
-	'''
-	'''
-	    if newFood[x][y] == True:
-	      distance = util.manhattanDistance((x,y),newPos)
-	      if distance == 1:
-	        countCloseFood += 5 
-	'''
 	for f in newFood.asList():
 	    distance = util.manhattanDistance(f,newPos)
 	    if distance < closestFood:
 	      closestFood = distance
-	#return total + countCloseFood + successorGameState.getScore()
-	return total + (100/(closestFood+1)) + 20*(oldNumFood - newNumFood) + successorGameState.getScore()
+	return total + (100/(closestFood+1)) + 50*(oldNumFood - newNumFood) + successorGameState.getScore()
 	 
 	'''
 	for index, ghost in enumerate(newGhostStates):
