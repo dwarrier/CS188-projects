@@ -535,17 +535,21 @@ def foodHeuristic(state, problem):
     if 'MST' not in problem.heuristicInfo.keys():
       problem.heuristicInfo['MST'] = makeMST(None, foodGrid.asList(), allEdges)
     mst = problem.heuristicInfo['MST']
-    if len(mst) == 0:
-      return 0
-    leafNodes = filter(lambda x : isLeafNode(mst, x), foodPositions)
-    closestLeaf = min([(position, i) for i in leafNodes], key=lambda x : distance(x[0],x[1]))
     mstCopy = mst[:]
     weightSum = 0
-    for edge in mstCopy:
-      if position in edge: # edit mst
-	mst.remove(edge)
-      else:
+    print foodPositions, mstCopy
+    for edge in mst:
+      # if edge is still in tree, add weights
+      if (position not in edge) and (edge[0] in foodGrid.asList()) and (edge[1] in foodGrid.asList()):
 	weightSum += distance(edge[0], edge[1])
+      else:
+	if edge in mstCopy:
+          mstCopy.remove(edge)
+
+    if len(mstCopy) == 0:
+      return 0
+    leafNodes = filter(lambda x : isLeafNode(mstCopy, x), foodPositions)
+    closestLeaf = min([(position, i) for i in leafNodes], key=lambda x : distance(x[0],x[1]))
     return distance(closestLeaf[0], closestLeaf[1]) + weightSum
 
 def mazeDistance(point1, point2, gameState):
