@@ -16,6 +16,7 @@
 from util import manhattanDistance
 from game import Directions
 import random, util
+import math
 
 from game import Agent
 
@@ -74,8 +75,75 @@ class ReflexAgent(Agent):
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
-        "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+	"*** YOUR CODE HERE ***"
+	newNumFood = successorGameState.getNumFood()
+	max = 500 
+	min = -500
+	total = 0
+	eatGhost = 500 
+	for index, ghost in enumerate(newGhostStates):
+          dist = util.manhattanDistance(newPos, ghost.getPosition())
+	  if (dist > 1):
+	    total += 50 
+	  if (ghost.getPosition() == newPos):
+	    total += min
+	return total + successorGameState.getScore()
+	 
+	'''
+	for index, ghost in enumerate(newGhostStates):
+	  if newScaredTimes[index] != 0:
+	    total -= 10*util.manhattanDistance(ghost.getPosition(),newPos)
+	  else:
+	    total += 2*util.manhattanDistance(ghost.getPosition(),newPos)
+
+	  if ghost.getPosition() == newPos:
+	    if newScaredTimes[index] == 0:
+	      return min
+	    else :
+	      total += eatGhost
+	'''
+	'''
+	if newNumFood == 0:
+	  return max
+	for index, ghost in enumerate(newGhostStates):
+	  total += 4*util.manhattanDistance(ghost.getPosition(),newPos)
+	  if ghost.getPosition() == newPos:
+	    return min
+
+        total += successorGameState.getScore()
+	'''
+	'''
+	if newNumFood == 0:
+	  return max
+	  
+	for index, ghost in enumerate(newGhostStates):
+	  if newScaredTimes[index] != 0:
+	    total += 10*util.manhattanDistance(ghost.getPosition(),newPos)
+	  if ghost.getPosition() == newPos:
+	    if newScaredTimes[index] == 0:
+	      return min
+	    else :
+	      total += eatGhost
+	   
+	    
+	# print(newPos)
+	# print(newFood)
+	# print(newGhostStates)
+	# print(newScaredTimes)
+	xlen = len(newFood[:][0])
+	ylen = len(newFood[0][:])
+	#radii = {1:20,2:0.5,3:0.4,4:0.3,5:0.1,6:0.05,7:0.04,8:0.02,9:0.01,10:0}
+	countCloseFood = 0
+	for x in range(xlen):
+	  for y in range(ylen):
+	    if newFood[x][y] == True:
+	      distance = util.manhattanDistance((x,y),newPos)
+	      countCloseFood += 100*math.exp(-distance)
+	    #if distance <= 20:
+	    #  countCloseFood += radii[distance]
+	total += countCloseFood + successorGameState.getScore()
+	#print(successorGameState.getScore())
+	'''
 
 def scoreEvaluationFunction(currentGameState):
     """
