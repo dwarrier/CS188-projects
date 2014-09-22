@@ -483,6 +483,7 @@ def foodHeuristic(state, problem):
     problem.heuristicInfo['wallCount']
     """
     position, foodGrid = state
+    return foodGrid.count()
     "*** YOUR CODE HERE ***"
     # Approach 1: take the leftmost and rightmost food
     # pellets and return the distance between them.
@@ -511,7 +512,7 @@ def foodHeuristic(state, problem):
     print leftmost, rightmost, util.manhattanDistance(leftmost, rightmost), foodCoord
     return util.manhattanDistance(leftmost, rightmost)
     '''
-    return 0
+    #return 0
 
 def mazeDistance(point1, point2, gameState):
     """
