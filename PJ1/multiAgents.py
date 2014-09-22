@@ -83,10 +83,16 @@ class ReflexAgent(Agent):
 	eatGhost = 500 
 	for index, ghost in enumerate(newGhostStates):
           dist = util.manhattanDistance(newPos, ghost.getPosition())
-	  if (dist > 1):
-	    total += 50 
-	  if (ghost.getPosition() == newPos):
-	    total += min
+	  if newScaredTimes[index] == 0:
+	    if (dist > 1):
+	      total += 50 
+	    if (ghost.getPosition() == newPos):
+	      total += min
+	  else:
+	    total += 50
+	    if (ghost.getPosition() == newPos):
+	      total += eatGhost 
+	    total -= dist
 
 	countCloseFood = 0
 	xlen = len(newFood[:][0])
