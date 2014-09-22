@@ -73,7 +73,9 @@ class ReflexAgent(Agent):
         newPos = successorGameState.getPacmanPosition()
         newFood = successorGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
+        oldGhostStates = currentGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+        oldScaredTimes = [ghostState.scaredTimer for ghostState in oldGhostStates]
 
 	"*** YOUR CODE HERE ***"
 	newNumFood = successorGameState.getNumFood()
@@ -92,7 +94,8 @@ class ReflexAgent(Agent):
 	    total += 50
 	    if (ghost.getPosition() == newPos):
 	      total += eatGhost 
-	    total -= dist
+	    if oldScaredTimes[index] != 0:
+	      total -= dist
 
 	countCloseFood = 0
 	xlen = len(newFood[:][0])
