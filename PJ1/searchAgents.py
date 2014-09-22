@@ -336,6 +336,45 @@ class CornersProblem(search.SearchProblem):
             if self.walls[x][y]: return 999999
         return len(actions)
 
+class DSet:
+  def __init__(self, vertices):
+    self.struct = dict((v, [v,0]) for v in vertices)
+
+  def union(self, x, y):
+    xroot = self.find(x)
+    yroot = self.find(y)
+    if xroot == yroot:
+      return
+    xv = self.struct[xroot]
+    yv = self.struct[yroot]
+    if xv[1] < yv[1]:
+      xv[0] = yroot
+    elif xv[1] > yv[1]:
+      yv[0] = xroot
+    else:
+      yv[0] = xroot
+      xv[1] += 1
+
+  def find(self, x):
+    if self.struct[x][0] != x:
+      self.struct[x][0] = self.find(self.struct[x][0])
+    return self.struct[x][0]
+
+# runs Kruskals algorithm while making closest
+# vertex a leaf node if possible.
+def modifiedKruskals(closest, vertices, edgeList):
+  dset = Dset(vertices)
+  mst = []
+  distance = util.manhattanDistance
+  # order edges by shortest edge, and then make edges with
+  # closest the last one if edges have the same length as closest
+  allEdges = sorted([(i,j, distance(i,j)) for i,j in edgeList], key=lambda e : e[2])
+  for p1, p2 in allEdges:
+    if dset.find(p1) != dset.find(p2):
+      mst.append((v1,v2))
+      dset.union(v1,v2)
+  return mst
+
 # returns whether position (x,y) is a leaf
 # node in min spanning tree MST.
 def isLeafCorner(edgeList, corner):
@@ -484,34 +523,20 @@ def foodHeuristic(state, problem):
     """
     position, foodGrid = state
     "*** YOUR CODE HERE ***"
-    # Approach 1: take the leftmost and rightmost food
-    # pellets and return the distance between them.
-    # leftmost ties are broken by lowest y coordinate,
-    # rightmost by highest.
-    '''
     if foodGrid.count() == 0:
-      print("DONE")
       return 0
-    foodCoord = foodGrid.asList()
-    '''
-    '''
-    if len(foodCoord) == 1:
-      print "ONE MORE", util.manhattanDistance(position, foodCoord[0])
-      return util.manhattanDistance(position, foodCoord[0])
-    leftmost = min(foodCoord, key=lambda x : x[0])
-    rightmost = max(foodCoord, key=lambda x : x[0])
-    if leftmost == rightmost:
-      # we know that there are at least two pellets still
-      # on the board, so we use highest and lowest now.
-    #print leftmost, rightmost, util.manhattanDistance(leftmost, rightmost), foodCoord, len(foodCoord)
-      highest = max(foodCoord, key=lambda x : x[1])
-      lowest = min(foodCoord, key=lambda x : x[1])
-      print "using high low", highest, lowest, foodCoord
-      return util.manhattanDistance(highest, lowest)
-    print leftmost, rightmost, util.manhattanDistance(leftmost, rightmost), foodCoord
-    return util.manhattanDistance(leftmost, rightmost)
-    '''
-    return 0
+    foodPositions = foodGrid.asList()
+    allEdges = []
+    for i in range(allEdges):
+      for j in range(i+1, allEdges):
+	allEdges.append(foodPositions[i], foodPositions[j])
+
+    if 'MST' not in problem.heuristicInfo.keys():
+      problem.heuristicInfo['MST'] = makeMST(None, foodGrid.asList(), allEdges)
+    mst = problem.heuristicInfo['MST']
+      leafNodes = filter(lambda x : isLeafNode(x, mst), mst)
+    closestLeaf, furthestLeaf = findLeaves(position, leafNodes)
+    return distance(position, leafNode) + distance(closestLeaf, furthestLeaf)
 
 def mazeDistance(point1, point2, gameState):
     """
