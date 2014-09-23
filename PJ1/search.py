@@ -82,7 +82,27 @@ def breadthFirstSearch(problem):
     You are not required to implement this, but you may find it useful for Q5.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    closedList = set()
+    fifo = util.Queue()
+    frontier = set()
+
+    startState = problem.getStartState()
+    fifo.push((startState,[],1))
+    frontier.add(startState)
+    while not fifo.isEmpty():
+        (state,actions,depth) = fifo.pop() #to be expanded next
+        frontier = frontier - set([state])
+        if problem.isGoalState(state): #if reached goal state, done!
+            return actions
+        closedList.add(state)
+	successors = problem.getSuccessors(state);
+	for (state,action,cost) in successors:
+	    if state not in closedList and state not in frontier:
+		fifo.push((state,actions + [action],depth + 1))
+		frontier.add(state)
+    return None
+    #util.raiseNotDefined()
+
 
 def depthLimitedSearch(problem, maxDepth):
     """
@@ -138,14 +158,14 @@ def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
     # setup priority queue
-    estimate_func = lambda((state, action, step_cost)) : heuristic(state, problem) + step_cost
+    estimate_func = lambda((state, action, cost)) : heuristic(state, problem) + cost
     frontier = util.PriorityQueueWithFunction(estimate_func)
     visited = []
     # initial actions are empty, inital step cost is 0
     frontier.push((problem.getStartState(), [], 0))
     while frontier.count != 0:
       # pop state 
-      (state, action_list, step_cost) = frontier.pop()
+      (state, action_list, curr_cost) = frontier.pop()
       # need to expand?
       if state in visited:
         continue;
@@ -153,7 +173,7 @@ def aStarSearch(problem, heuristic=nullHeuristic):
 	return action_list
       # expand state
       for (child_state,action,step_cost) in problem.getSuccessors(state):
-	frontier.push((child_state, action_list + [action], step_cost))
+	frontier.push((child_state, action_list + [action], curr_cost + step_cost))
       # mark as visited
       visited.append(state)
 
