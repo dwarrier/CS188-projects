@@ -16,7 +16,6 @@
 from util import manhattanDistance
 from game import Directions
 import random, util
-import math
 
 from game import Agent
 
@@ -73,38 +72,10 @@ class ReflexAgent(Agent):
         newPos = successorGameState.getPacmanPosition()
         newFood = successorGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
-        oldGhostStates = currentGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
-        oldScaredTimes = [ghostState.scaredTimer for ghostState in oldGhostStates]
 
-	"*** YOUR CODE HERE ***"
-	newNumFood = successorGameState.getNumFood()
-	oldNumFood = currentGameState.getNumFood()
-	max = 500 
-	min = -500
-	total = 0
-	eatGhost = 500 
-	for index, ghost in enumerate(newGhostStates):
-          dist = util.manhattanDistance(newPos, ghost.getPosition())
-	  if newScaredTimes[index] == 0:
-	    if (dist > 1):
-	      total += 50 
-	    if (ghost.getPosition() == newPos):
-	      total += min
-	  else:
-	    total += 50
-	    if (ghost.getPosition() == newPos):
-	      total += eatGhost 
-	    if oldScaredTimes[index] != 0:
-	      total -= dist
-
-	#countCloseFood = 0
-	closestFood = 999999 
-	for f in newFood.asList():
-	    distance = util.manhattanDistance(f,newPos)
-	    if distance < closestFood:
-	      closestFood = distance
-	return total + (100/(closestFood+1)) + 50*(oldNumFood - newNumFood) + successorGameState.getScore()
+        "*** YOUR CODE HERE ***"
+        return successorGameState.getScore()
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -159,32 +130,32 @@ class MinimaxAgent(MultiAgentSearchAgent):
             Returns the total number of agents in the game
         """
         "*** YOUR CODE HERE ***"
-	actions = gameState.getLegalActions(self.index)
-	 if len(actions) == 0:
-	   return self.evaluationFunction(gameState)
-	 value = self.getMinValue(self.index + 1,gameState.generateSuccessor(self.index,actions[0]),self.depth)
-	 bestAction = actions[0]
-	 for a in actions[1:]:
-	   currValue = self.getMinValue(self.index + 1, gameState.generateSuccessor(self.index,a),self.depth)
-	   if currValue > value:
-	     value = currValue
-	     bestAction = a 
-	 return bestAction
+        actions = gameState.getLegalActions(self.index)
+        if len(actions) == 0:
+          return self.evaluationFunction(gameState)
+        value = self.getMinValue(self.index + 1,gameState.generateSuccessor(self.index,actions[0]),self.depth)
+        bestAction = actions[0]
+        for a in actions[1:]:
+          currValue = self.getMinValue(self.index + 1, gameState.generateSuccessor(self.index,a),self.depth)
+          if currValue > value:
+            value = currValue
+            bestAction = a
+        return bestAction
 
     def getMinValue(self,agentIndex,gameState,depth):
       actions = gameState.getLegalActions(agentIndex)
       if len(actions) == 0:
-	return self.evaluationFunction(gameState)
+        return self.evaluationFunction(gameState)
       if agentIndex == gameState.getNumAgents() - 1:
-	value = self.getMaxValue(0, gameState.generateSuccessor(agentIndex,actions[0]),depth - 1)
+        value = self.getMaxValue(0, gameState.generateSuccessor(agentIndex,actions[0]),depth - 1)
       else:
-	value = self.getMinValue(agentIndex + 1, gameState.generateSuccessor(agentIndex,actions[0]),depth)
+        value = self.getMinValue(agentIndex + 1, gameState.generateSuccessor(agentIndex,actions[0]),depth)
       for a in actions[1:]:
-	if agentIndex == gameState.getNumAgents() - 1:
-	  currValue = self.getMaxValue(0, gameState.generateSuccessor(agentIndex,a),depth - 1)
-	else:
-	  currValue = self.getMinValue(agentIndex + 1, gameState.generateSuccessor(agentIndex,a),depth )
-	value = min(value,currValue)
+        if agentIndex == gameState.getNumAgents() - 1:
+          currValue = self.getMaxValue(0, gameState.generateSuccessor(agentIndex,a),depth - 1)
+        else:
+          currValue = self.getMinValue(agentIndex + 1, gameState.generateSuccessor(agentIndex,a),depth )
+        value = min(value,currValue)
       return value
 
     def getMaxValue(self,agentIndex,gameState,depth):
@@ -199,7 +170,6 @@ class MinimaxAgent(MultiAgentSearchAgent):
         value = max(value,currValue)
       return value
 
-
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
       Your expectimax agent (question 8)
@@ -213,7 +183,46 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
           legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        actions = gameState.getLegalActions(self.index)
+        if len(actions) == 0:
+          return self.evaluationFunction(gameState)
+        value = self.getExpectiValue(self.index + 1,gameState.generateSuccessor(self.index,actions[0]),self.depth)
+        bestAction = actions[0]
+        for a in actions[1:]:
+          currValue = self.getExpectiValue(self.index + 1, gameState.generateSuccessor(self.index,a),self.depth)
+          if currValue > value:
+            value = currValue
+            bestAction = a
+        return bestAction
+
+    def getExpectiValue(self,agentIndex,gameState,depth):
+      actions = gameState.getLegalActions(agentIndex)
+      if len(actions) == 0:
+        return self.evaluationFunction(gameState)
+      if agentIndex == gameState.getNumAgents() - 1:
+        value = self.getMaxValue(0, gameState.generateSuccessor(agentIndex,actions[0]),depth - 1)
+      else:
+        value = self.getExpectiValue(agentIndex + 1, gameState.generateSuccessor(agentIndex,actions[0]),depth)
+      for a in actions[1:]:
+        if agentIndex == gameState.getNumAgents() - 1:
+          currValue = self.getMaxValue(0, gameState.generateSuccessor(agentIndex,a),depth - 1)
+        else:
+          currValue = self.getExpectiValue(agentIndex + 1, gameState.generateSuccessor(agentIndex,a),depth )
+        value += currValue
+      return value*1.0/len(actions)
+
+    def getMaxValue(self,agentIndex,gameState,depth):
+      if (depth == 0):
+        return self.evaluationFunction(gameState)
+      actions = gameState.getLegalActions(agentIndex)
+      if len(actions) == 0:
+        return self.evaluationFunction(gameState)
+      value = self.getExpectiValue(agentIndex + 1, gameState.generateSuccessor(agentIndex,actions[0]),depth)
+      for a in actions[1:]:
+        currValue = self.getExpectiValue(agentIndex + 1, gameState.generateSuccessor(agentIndex,a),depth)
+        value = max(value,currValue)
+      return value
+        
 
 def betterEvaluationFunction(currentGameState):
     """
