@@ -99,11 +99,7 @@ def depthLimitedSearch(problem, maxDepth):
         (state,actions,depth) = lifo.pop() #to be expanded next
         frontier = frontier - set([state])
         # if state in closedList: #if in closed list, aka already expanded, move on
-        #     print(state)
-        #     print("is in closedList")
         #     continue
-        # print(state)
-        # print("not in closedList")
         if problem.isGoalState(state): #if reached goal state, done!
             return actions
         closedList.add(state)
@@ -136,11 +132,6 @@ def iterativeDeepeningSearch(problem):
         solution = depthLimitedSearch(problem,depth)
         depth += 1
     return solution
-    # for depth in range(1,6):
-    #     solution = depthLimitedSearch(problem,depth)
-    #     if solution != None:
-    #         return solution
-    # return solution
 
 
 def aStarSearch(problem, heuristic=nullHeuristic):
