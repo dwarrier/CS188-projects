@@ -336,6 +336,16 @@ class CornersProblem(search.SearchProblem):
             if self.walls[x][y]: return 999999
         return len(actions)
 
+# returns whether position (x,y) is a leaf
+# node in min spanning tree MST.
+def isLeafNode(edgeList, corner):
+  # position is leaf if it only shows up once
+  # in MST.
+  count = 0
+  for edge in edgeList:
+    if corner in edge:
+      count += 1
+  return count == 1
 
 def cornersHeuristic(state, problem):
     """
@@ -350,16 +360,16 @@ def cornersHeuristic(state, problem):
     shortest path from the state to a goal of the problem; i.e.  it should be
     admissible (as well as consistent).
     """
-    corners = problem.corners # These are the corner coordinates, as tuple
+    corners = problem.corners # These are the corner coordinates
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
 
     "*** YOUR CODE HERE ***"
-    #return 0 # Default to trivial solution
     # Approach 1: add minimum manhattan distances between remaining corners (lazy min spanning tree)
     (currentPosition, unvisitedCorners) = state
+    # min spanning tree contains list of position pairs that
+    # are edges in the tree.
     total_dist = 0
-    edges = []
-    distToCorners = []
+    cornerEdges = [] # paths between corners
     if unvisitedCorners == []:
       return 0
     if len(unvisitedCorners) == 1:
@@ -367,15 +377,20 @@ def cornersHeuristic(state, problem):
     l = len(unvisitedCorners)
     for i in range(l):
       for j in range(i+1,l):
-        edges.append((unvisitedCorners[i], unvisitedCorners[j]))
-      distToCorners.append((currentPosition, unvisitedCorners[i])) 
-    # add up min edge lengths
-    min_edges = sorted(edges, key=lambda x : util.manhattanDistance(x[0],x[1]))
-    min_corners = sorted(distToCorners, key = lambda x: util.manhattanDistance(x[0],x[1]))
-    for i in range(len(unvisitedCorners)-1):
-      total_dist += util.manhattanDistance(min_edges[i][0], min_edges[i][1])
-    total_dist += util.manhattanDistance(min_corners[0][0], min_corners[0][1])
-    return total_dist
+        cornerEdges.append((unvisitedCorners[i], unvisitedCorners[j]))
+    # make MST
+    minCornerEdges = sorted(cornerEdges, key=lambda x : util.manhattanDistance(x[0],x[1]))[:len(unvisitedCorners)-1]
+
+    if len(unvisitedCorners) == 3:
+      leafCorners = filter(lambda x : isLeafNode(minCornerEdges, x), unvisitedCorners)
+    else:
+      leafCorners = unvisitedCorners[:]
+
+    # find min path to leaf corner
+    minPathToLeafCorner = min([(currentPosition, i) for i in leafCorners], key=lambda x : util.manhattanDistance(x[0],x[1]))
+    for edge in minCornerEdges:
+      total_dist += util.manhattanDistance(edge[0], edge[1])
+    return total_dist + util.manhattanDistance(minPathToLeafCorner[0], minPathToLeafCorner[1])
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -469,7 +484,21 @@ def foodHeuristic(state, problem):
     """
     position, foodGrid = state
     "*** YOUR CODE HERE ***"
-    return 0
+    distance = lambda x,y : mazeDistance(x,y,problem.startingGameState)
+    #max = 0
+    if foodGrid.count() == 0:
+      return 0
+    if foodGrid.count() == 1:
+      return distance(position,foodGrid.asList()[0]) 
+    #min = 999999
+    l = foodGrid.asList()
+    a = []
+    for i in range(len(l)):
+      for j in range(i+1, len(l)):
+        a.append((l[i],l[j]))
+    furthestDist = max(a, key=lambda x : distance(x[0],x[1]))
+    closestDist = min([(position, i) for i in foodGrid.asList()], key=lambda x : distance(x[0],x[1]))
+    return distance(furthestDist[0], furthestDist[1]) + distance(closestDist[0], closestDist[1])
 
 def mazeDistance(point1, point2, gameState):
     """
