@@ -160,16 +160,16 @@ class MinimaxAgent(MultiAgentSearchAgent):
         """
         "*** YOUR CODE HERE ***"
 	actions = gameState.getLegalActions(self.index)
-	 if len(actions) == 0:
-	   return self.evaluationFunction(gameState)
-	 value = self.getMinValue(self.index + 1,gameState.generateSuccessor(self.index,actions[0]),self.depth)
-	 bestAction = actions[0]
-	 for a in actions[1:]:
-	   currValue = self.getMinValue(self.index + 1, gameState.generateSuccessor(self.index,a),self.depth)
-	   if currValue > value:
-	     value = currValue
-	     bestAction = a 
-	 return bestAction
+	if len(actions) == 0:
+	  return self.evaluationFunction(gameState)
+	value = self.getMinValue(self.index + 1,gameState.generateSuccessor(self.index,actions[0]),self.depth)
+	bestAction = actions[0]
+	for a in actions[1:]:
+	  currValue = self.getMinValue(self.index + 1, gameState.generateSuccessor(self.index,a),self.depth)
+	  if currValue > value:
+	    value = currValue
+	    bestAction = a 
+	return bestAction
 
     def getMinValue(self,agentIndex,gameState,depth):
       actions = gameState.getLegalActions(agentIndex)
