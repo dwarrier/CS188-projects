@@ -147,14 +147,14 @@ def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
     # setup priority queue
-    estimate_func = lambda((state, action, step_cost)) : heuristic(state, problem) + step_cost
+    estimate_func = lambda((state, action, cost)) : heuristic(state, problem) + cost
     frontier = util.PriorityQueueWithFunction(estimate_func)
     visited = []
     # initial actions are empty, inital step cost is 0
     frontier.push((problem.getStartState(), [], 0))
     while frontier.count != 0:
       # pop state 
-      (state, action_list, step_cost) = frontier.pop()
+      (state, action_list, curr_cost) = frontier.pop()
       # need to expand?
       if state in visited:
         continue;
@@ -162,7 +162,7 @@ def aStarSearch(problem, heuristic=nullHeuristic):
 	return action_list
       # expand state
       for (child_state,action,step_cost) in problem.getSuccessors(state):
-	frontier.push((child_state, action_list + [action], step_cost))
+	frontier.push((child_state, action_list + [action], curr_cost + step_cost))
       # mark as visited
       visited.append(state)
 
