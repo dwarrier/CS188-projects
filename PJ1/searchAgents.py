@@ -335,10 +335,50 @@ class CornersProblem(search.SearchProblem):
             x, y = int(x + dx), int(y + dy)
             if self.walls[x][y]: return 999999
         return len(actions)
+'''
+class DSet:
+  def __init__(self, vertices):
+    self.struct = dict((v, [v,0]) for v in vertices)
+
+  def union(self, x, y):
+    xroot = self.find(x)
+    yroot = self.find(y)
+    if xroot == yroot:
+      return
+    xv = self.struct[xroot]
+    yv = self.struct[yroot]
+    if xv[1] < yv[1]:
+      xv[0] = yroot
+    elif xv[1] > yv[1]:
+      yv[0] = xroot
+    else:
+      yv[0] = xroot
+      xv[1] += 1
+
+  def find(self, x):
+    if self.struct[x][0] != x:
+      self.struct[x][0] = self.find(self.struct[x][0])
+    return self.struct[x][0]
+
+# runs Kruskals algorithm while making closest
+# vertex a leaf node if possible.
+def makeMST(closest, vertices, edgeList):
+  dset = DSet(vertices)
+  mst = []
+  distance = util.manhattanDistance
+  # order edges by shortest edge, and then make edges with
+  # closest the last one if edges have the same length as closest
+  allEdges = sorted([(i,j, distance(i,j)) for i,j in edgeList], key=lambda e : e[2])
+  for p1, p2, d in allEdges:
+    if dset.find(p1) != dset.find(p2):
+      mst.append((p1,p2))
+      dset.union(p1,p2)
+  return mst
+'''
 
 # returns whether position (x,y) is a leaf
 # node in min spanning tree MST.
-def isLeafCorner(edgeList, corner):
+def isLeafNode(edgeList, corner):
   # position is leaf if it only shows up once
   # in MST.
   count = 0
@@ -382,7 +422,7 @@ def cornersHeuristic(state, problem):
     minCornerEdges = sorted(cornerEdges, key=lambda x : util.manhattanDistance(x[0],x[1]))[:len(unvisitedCorners)-1]
 
     if len(unvisitedCorners) == 3:
-      leafCorners = filter(lambda x : isLeafCorner(minCornerEdges, x), unvisitedCorners)
+      leafCorners = filter(lambda x : isLeafNode(minCornerEdges, x), unvisitedCorners)
     else:
       leafCorners = unvisitedCorners[:]
 
@@ -483,36 +523,53 @@ def foodHeuristic(state, problem):
     problem.heuristicInfo['wallCount']
     """
     position, foodGrid = state
-    return foodGrid.count()
     "*** YOUR CODE HERE ***"
-    # Approach 1: take the leftmost and rightmost food
-    # pellets and return the distance between them.
-    # leftmost ties are broken by lowest y coordinate,
-    # rightmost by highest.
     '''
+    distance = util.manhattanDistance
+    #distance = lambda x,y : mazeDistance(x,y,problem.startingGameState)
     if foodGrid.count() == 0:
-      print("DONE")
       return 0
-    foodCoord = foodGrid.asList()
+    foodPositions = foodGrid.asList()
+    allEdges = []
+    for i in range(len(foodPositions)):
+      for j in range(i+1, len(foodPositions)):
+	allEdges.append((foodPositions[i], foodPositions[j]))
+
+    if 'MST' not in problem.heuristicInfo.keys():
+      problem.heuristicInfo['MST'] = makeMST(None, foodGrid.asList(), allEdges)
+    mst = problem.heuristicInfo['MST']
+    mstCopy = mst[:]
+    weightSum = 0
+    for edge in mst:
+      # if edge is still in tree, add weights
+      if (position not in edge) and (edge[0] in foodGrid.asList()) and (edge[1] in foodGrid.asList()):
+	weightSum += distance(edge[0], edge[1])
+      else:
+	if edge in mstCopy:
+          mstCopy.remove(edge)
+
+    if len(mstCopy) == 0:
+      return 0
+    #leafNodes = filter(lambda x : isLeafNode(mstCopy, x), foodPositions)
+    #closestLeaf = min([(position, i) for i in leafNodes], key=lambda x : distance(x[0],x[1]))
+    closestNode = min([(position, i) for i in foodPositions], key=lambda x : distance(x[0],x[1]))
+    return distance(closestNode[0], closestNode[1]) + weightSum
     '''
-    '''
-    if len(foodCoord) == 1:
-      print "ONE MORE", util.manhattanDistance(position, foodCoord[0])
-      return util.manhattanDistance(position, foodCoord[0])
-    leftmost = min(foodCoord, key=lambda x : x[0])
-    rightmost = max(foodCoord, key=lambda x : x[0])
-    if leftmost == rightmost:
-      # we know that there are at least two pellets still
-      # on the board, so we use highest and lowest now.
-    #print leftmost, rightmost, util.manhattanDistance(leftmost, rightmost), foodCoord, len(foodCoord)
-      highest = max(foodCoord, key=lambda x : x[1])
-      lowest = min(foodCoord, key=lambda x : x[1])
-      print "using high low", highest, lowest, foodCoord
-      return util.manhattanDistance(highest, lowest)
-    print leftmost, rightmost, util.manhattanDistance(leftmost, rightmost), foodCoord
-    return util.manhattanDistance(leftmost, rightmost)
-    '''
-    #return 0
+    distance = lambda x,y : mazeDistance(x,y,problem.startingGameState)
+    #max = 0
+    if foodGrid.count() == 0:
+      return 0
+    if foodGrid.count() == 1:
+      return distance(position,foodGrid.asList()[0]) 
+    #min = 999999
+    l = foodGrid.asList()
+    a = []
+    for i in range(len(l)):
+      for j in range(i+1, len(l)):
+        a.append((l[i],l[j]))
+    furthestDist = max(a, key=lambda x : distance(x[0],x[1]))
+    closestDist = min([(position, i) for i in foodGrid.asList()], key=lambda x : distance(x[0],x[1]))
+    return distance(furthestDist[0], furthestDist[1]) + distance(closestDist[0], closestDist[1])
 
 def mazeDistance(point1, point2, gameState):
     """

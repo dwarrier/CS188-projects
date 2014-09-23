@@ -82,7 +82,27 @@ def breadthFirstSearch(problem):
     You are not required to implement this, but you may find it useful for Q5.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    closedList = set()
+    fifo = util.Queue()
+    frontier = set()
+
+    startState = problem.getStartState()
+    fifo.push((startState,[],1))
+    frontier.add(startState)
+    while not fifo.isEmpty():
+        (state,actions,depth) = fifo.pop() #to be expanded next
+        frontier = frontier - set([state])
+        if problem.isGoalState(state): #if reached goal state, done!
+            return actions
+        closedList.add(state)
+	successors = problem.getSuccessors(state);
+	for (state,action,cost) in successors:
+	    if state not in closedList and state not in frontier:
+		fifo.push((state,actions + [action],depth + 1))
+		frontier.add(state)
+    return None
+    #util.raiseNotDefined()
+
 
 def depthLimitedSearch(problem, maxDepth):
     """
