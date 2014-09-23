@@ -335,46 +335,6 @@ class CornersProblem(search.SearchProblem):
             x, y = int(x + dx), int(y + dy)
             if self.walls[x][y]: return 999999
         return len(actions)
-'''
-class DSet:
-  def __init__(self, vertices):
-    self.struct = dict((v, [v,0]) for v in vertices)
-
-  def union(self, x, y):
-    xroot = self.find(x)
-    yroot = self.find(y)
-    if xroot == yroot:
-      return
-    xv = self.struct[xroot]
-    yv = self.struct[yroot]
-    if xv[1] < yv[1]:
-      xv[0] = yroot
-    elif xv[1] > yv[1]:
-      yv[0] = xroot
-    else:
-      yv[0] = xroot
-      xv[1] += 1
-
-  def find(self, x):
-    if self.struct[x][0] != x:
-      self.struct[x][0] = self.find(self.struct[x][0])
-    return self.struct[x][0]
-
-# runs Kruskals algorithm while making closest
-# vertex a leaf node if possible.
-def makeMST(closest, vertices, edgeList):
-  dset = DSet(vertices)
-  mst = []
-  distance = util.manhattanDistance
-  # order edges by shortest edge, and then make edges with
-  # closest the last one if edges have the same length as closest
-  allEdges = sorted([(i,j, distance(i,j)) for i,j in edgeList], key=lambda e : e[2])
-  for p1, p2, d in allEdges:
-    if dset.find(p1) != dset.find(p2):
-      mst.append((p1,p2))
-      dset.union(p1,p2)
-  return mst
-'''
 
 # returns whether position (x,y) is a leaf
 # node in min spanning tree MST.
@@ -524,37 +484,6 @@ def foodHeuristic(state, problem):
     """
     position, foodGrid = state
     "*** YOUR CODE HERE ***"
-    '''
-    distance = util.manhattanDistance
-    #distance = lambda x,y : mazeDistance(x,y,problem.startingGameState)
-    if foodGrid.count() == 0:
-      return 0
-    foodPositions = foodGrid.asList()
-    allEdges = []
-    for i in range(len(foodPositions)):
-      for j in range(i+1, len(foodPositions)):
-	allEdges.append((foodPositions[i], foodPositions[j]))
-
-    if 'MST' not in problem.heuristicInfo.keys():
-      problem.heuristicInfo['MST'] = makeMST(None, foodGrid.asList(), allEdges)
-    mst = problem.heuristicInfo['MST']
-    mstCopy = mst[:]
-    weightSum = 0
-    for edge in mst:
-      # if edge is still in tree, add weights
-      if (position not in edge) and (edge[0] in foodGrid.asList()) and (edge[1] in foodGrid.asList()):
-	weightSum += distance(edge[0], edge[1])
-      else:
-	if edge in mstCopy:
-          mstCopy.remove(edge)
-
-    if len(mstCopy) == 0:
-      return 0
-    #leafNodes = filter(lambda x : isLeafNode(mstCopy, x), foodPositions)
-    #closestLeaf = min([(position, i) for i in leafNodes], key=lambda x : distance(x[0],x[1]))
-    closestNode = min([(position, i) for i in foodPositions], key=lambda x : distance(x[0],x[1]))
-    return distance(closestNode[0], closestNode[1]) + weightSum
-    '''
     distance = lambda x,y : mazeDistance(x,y,problem.startingGameState)
     #max = 0
     if foodGrid.count() == 0:
