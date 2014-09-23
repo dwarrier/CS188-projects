@@ -335,7 +335,7 @@ class CornersProblem(search.SearchProblem):
             x, y = int(x + dx), int(y + dy)
             if self.walls[x][y]: return 999999
         return len(actions)
-
+'''
 class DSet:
   def __init__(self, vertices):
     self.struct = dict((v, [v,0]) for v in vertices)
@@ -374,6 +374,7 @@ def makeMST(closest, vertices, edgeList):
       mst.append((p1,p2))
       dset.union(p1,p2)
   return mst
+'''
 
 # returns whether position (x,y) is a leaf
 # node in min spanning tree MST.
@@ -569,18 +570,6 @@ def foodHeuristic(state, problem):
     furthestDist = max(a, key=lambda x : distance(x[0],x[1]))
     closestDist = min([(position, i) for i in foodGrid.asList()], key=lambda x : distance(x[0],x[1]))
     return distance(furthestDist[0], furthestDist[1]) + distance(closestDist[0], closestDist[1])
-    '''
-    for i in range(len(l)):
-	for j in range(i+1, len(l)):
-	  if distance(l[i],l[j]) <= min:
-	    min = distance(l[i],l[j])
-    '''
-    '''
-    for i in range(len(l)):
-      if distance(position,l[i]) <= min:
-        min = distance(position,l[i])
-    return min + foodGrid.count() - 1
-    '''
 
 def mazeDistance(point1, point2, gameState):
     """
