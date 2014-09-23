@@ -523,7 +523,9 @@ def foodHeuristic(state, problem):
     """
     position, foodGrid = state
     "*** YOUR CODE HERE ***"
+    '''
     distance = util.manhattanDistance
+    #distance = lambda x,y : mazeDistance(x,y,problem.startingGameState)
     if foodGrid.count() == 0:
       return 0
     foodPositions = foodGrid.asList()
@@ -537,7 +539,6 @@ def foodHeuristic(state, problem):
     mst = problem.heuristicInfo['MST']
     mstCopy = mst[:]
     weightSum = 0
-    print foodPositions, mstCopy
     for edge in mst:
       # if edge is still in tree, add weights
       if (position not in edge) and (edge[0] in foodGrid.asList()) and (edge[1] in foodGrid.asList()):
@@ -548,9 +549,38 @@ def foodHeuristic(state, problem):
 
     if len(mstCopy) == 0:
       return 0
-    leafNodes = filter(lambda x : isLeafNode(mstCopy, x), foodPositions)
-    closestLeaf = min([(position, i) for i in leafNodes], key=lambda x : distance(x[0],x[1]))
-    return distance(closestLeaf[0], closestLeaf[1]) + weightSum
+    #leafNodes = filter(lambda x : isLeafNode(mstCopy, x), foodPositions)
+    #closestLeaf = min([(position, i) for i in leafNodes], key=lambda x : distance(x[0],x[1]))
+    closestNode = min([(position, i) for i in foodPositions], key=lambda x : distance(x[0],x[1]))
+    return distance(closestNode[0], closestNode[1]) + weightSum
+    '''
+    distance = lambda x,y : mazeDistance(x,y,problem.startingGameState)
+    #max = 0
+    if foodGrid.count() == 0:
+      return 0
+    if foodGrid.count() == 1:
+      return distance(position,foodGrid.asList()[0]) 
+    #min = 999999
+    l = foodGrid.asList()
+    a = []
+    for i in range(len(l)):
+      for j in range(i+1, len(l)):
+        a.append((l[i],l[j]))
+    furthestDist = max(a, key=lambda x : distance(x[0],x[1]))
+    closestDist = min([(position, i) for i in foodGrid.asList()], key=lambda x : distance(x[0],x[1]))
+    return distance(furthestDist[0], furthestDist[1]) + distance(closestDist[0], closestDist[1])
+    '''
+    for i in range(len(l)):
+	for j in range(i+1, len(l)):
+	  if distance(l[i],l[j]) <= min:
+	    min = distance(l[i],l[j])
+    '''
+    '''
+    for i in range(len(l)):
+      if distance(position,l[i]) <= min:
+        min = distance(position,l[i])
+    return min + foodGrid.count() - 1
+    '''
 
 def mazeDistance(point1, point2, gameState):
     """
