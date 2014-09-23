@@ -84,6 +84,38 @@ def breadthFirstSearch(problem):
     "*** YOUR CODE HERE ***"
     util.raiseNotDefined()
 
+def depthLimitedSearch(problem, maxDepth):
+    """
+    Search the deepest nodes in the search tree first. Only search to indicated depth.
+    """
+    closedList = set()
+    lifo = util.Stack()
+    frontier = set()
+
+    startState = problem.getStartState()
+    lifo.push((startState,[],1))
+    frontier.add(startState)
+    while not lifo.isEmpty():
+        (state,actions,depth) = lifo.pop() #to be expanded next
+        frontier = frontier - set([state])
+        # if state in closedList: #if in closed list, aka already expanded, move on
+        #     print(state)
+        #     print("is in closedList")
+        #     continue
+        # print(state)
+        # print("not in closedList")
+        if problem.isGoalState(state): #if reached goal state, done!
+            return actions
+        closedList.add(state)
+        if depth < maxDepth: #continue going deeper
+            successors = problem.getSuccessors(state);
+            for (state,action,cost) in successors:
+                if state not in closedList and state not in frontier:
+                    lifo.push((state,actions + [action],depth + 1))
+                    frontier.add(state)
+    return None
+
+
 def nullHeuristic(state, problem=None):
     """
     A heuristic function estimates the cost from the current state to the nearest
@@ -98,12 +130,41 @@ def iterativeDeepeningSearch(problem):
     Begin with a depth of 1 and increment depth by 1 at every step.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    depth = 1
+    solution = None
+    while solution == None:
+        solution = depthLimitedSearch(problem,depth)
+        depth += 1
+    return solution
+    # for depth in range(1,6):
+    #     solution = depthLimitedSearch(problem,depth)
+    #     if solution != None:
+    #         return solution
+    # return solution
+
 
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # setup priority queue
+    estimate_func = lambda((state, action, step_cost)) : heuristic(state, problem) + step_cost
+    frontier = util.PriorityQueueWithFunction(estimate_func)
+    visited = []
+    # initial actions are empty, inital step cost is 0
+    frontier.push((problem.getStartState(), [], 0))
+    while frontier.count != 0:
+      # pop state 
+      (state, action_list, step_cost) = frontier.pop()
+      # need to expand?
+      if state in visited:
+        continue;
+      if problem.isGoalState(state):
+	return action_list
+      # expand state
+      for (child_state,action,step_cost) in problem.getSuccessors(state):
+	frontier.push((child_state, action_list + [action], step_cost))
+      # mark as visited
+      visited.append(state)
 
 # Abbreviations
 bfs = breadthFirstSearch
