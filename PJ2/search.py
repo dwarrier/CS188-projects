@@ -148,8 +148,9 @@ def atLeastOne(expressions) :
     True
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
-
+    if not expressions:
+      return logic.FALSE 
+    return expressions[0] | atLeastOne(expressions[1::])
 
 def atMostOne(expressions) :
     """
@@ -157,8 +158,18 @@ def atMostOne(expressions) :
     that represents the logic that at most one of the expressions in the list is true.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
-
+    if not expressions:
+      return logic.TRUE 
+    # Actual logic:
+    '''
+    return (expressions[0] & ~atLeastOne(expressions[1::])) \
+	| (~expressions[0] & atMostOne(expressions[1::]))
+    '''
+    # CNF:
+    return (expressions[0] | ~expressions[0]) \
+	& (expressions[0] | atMostOne(expressions[1::])) \
+	& (~expressions[0] | ~atLeastOne(expressions[1::])) \
+	& (~atLeastOne(expressions[1::]) | atMostOne(expressions[1::]))
 
 def exactlyOne(expressions) :
     """
@@ -166,7 +177,18 @@ def exactlyOne(expressions) :
     that represents the logic that exactly one of the expressions in the list is true.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    if not expressions:
+      return logic.FALSE 
+    # Actual logic:
+    '''
+    return (expressions[0] & ~atLeastOne(expressions[1::])) \
+	| (~expressions[0] & exactlyOne(expressions[1::]))
+    '''
+    # CNF:
+    return (expressions[0] | ~expressions[0]) \
+	& (expressions[0] | exactlyOne(expressions[1::])) \
+	& (~expressions[0] | ~atLeastOne(expressions[1::])) \
+	& (~atLeastOne(expressions[1::]) | exactlyOne(expressions[1::]))
 
 
 def extractActionSequence(model, actions):
