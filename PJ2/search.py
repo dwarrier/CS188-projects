@@ -36,6 +36,7 @@ Pacman agents (in searchAgents.py).
 import util
 import sys
 import logic
+import game
 
 class SearchProblem:
     """
@@ -180,16 +181,16 @@ def exactlyOne(expressions) :
     if not expressions:
       return logic.FALSE 
     # Actual logic:
-    '''
+    # TODO: FIX ME!
     return (expressions[0] & ~atLeastOne(expressions[1::])) \
 	| (~expressions[0] & exactlyOne(expressions[1::]))
-    '''
     # CNF:
+    '''
     return (expressions[0] | ~expressions[0]) \
 	& (expressions[0] | exactlyOne(expressions[1::])) \
 	& (~expressions[0] | ~atLeastOne(expressions[1::])) \
 	& (~atLeastOne(expressions[1::]) | exactlyOne(expressions[1::]))
-
+    '''
 
 def extractActionSequence(model, actions):
     """
@@ -243,6 +244,7 @@ def positionLogicPlan(problem):
 	  all_exprs.append(wallExpr)
 	else:
 	  all_exprs.append(~wallExpr)
+    print("debug 1")
 
     # ENCODE restriction for single action per timestep
     for t in range(T_MAX):
@@ -254,6 +256,7 @@ def positionLogicPlan(problem):
 	    logic.PropSymbolExpr(a,t))
       all_exprs.append(
 	  exactlyOne(actions_for_t))
+    print("debug 2")
 
     # ENCODE that goal must be true only once
     # among all timesteps
@@ -283,11 +286,12 @@ def positionLogicPlan(problem):
       pos_list = possiblePositionsFromStartForTimestep(
 	  problem, t)
       for pos in pos_list:
+	(p,(x,y,t)) = logic.PropSymbolExpr.parseExpr(pos)
 	# don't want to enforce requirements
 	# for the start state at t = 0
 	if pos == start_state:
 	  continue
-	req_expr = makeRequirementsForPosition(pos, action_list)
+	req_expr = makeRequirementsForPosition(problem, pos)
 
 	# pos <=> ~wallExpr(pos) & req_expr
 	# actual logic: 
@@ -304,8 +308,8 @@ def positionLogicPlan(problem):
 	#CNF:
 	all_exprs.append( 
 	  (~pos | req_expr) \
-	  & (~pos | ~wallExpr(pos)) \
-	  & (~req_expr | wallExpr(pos) | pos))
+	  & (~pos | ~wallExpr((x,y))) \
+	  & (~req_expr | wallExpr((x,y)) | pos))
 	# TODO: make these seperate entries for speed?
 	# TODO: use Expr class instead for <=>
     
@@ -341,33 +345,33 @@ def makeRequirementsForPosition(problem, pos):
   # action_map gives the action that must lead
   # to this position starting from (x+i, y+j) for
   # the key (i,j)
-  action_map = {(-1,0) : game.directions.EAST, \
-      (0, 1) : game.directions.SOUTH, \
-      (1, 0) : game.directions.WEST, \
-      (0, -1) : game.directions.NORTH }
+  action_map = {(-1,0) : game.Directions.EAST, \
+      (0, 1) : game.Directions.SOUTH, \
+      (1, 0) : game.Directions.WEST, \
+      (0, -1) : game.Directions.NORTH }
   # actionExpr makes a logic.PropSymbolExpr
   # given an action and timestep
   actionExpr = lambda action, t : \
       logic.PropSymbolExpr(action,t)
 
   # current x pos, y pos, and timestep
-  x,y,t = logic.PropSymbolExpr.parse(pos)
+  (p,(x,y,t)) = logic.PropSymbolExpr.parseExpr(pos)
 
   arglist = []
   for i in range(x-1, x+1):
     for j in range(y-1, y+1):
       # rule out positions outside the proper range
-      if math.abs(i) != math.abs(j):
+      if abs(i-x) != abs(j-y):
 	# position modifier
-	pos = (x,y)
+	pos = (i,j)
 	pos_mod = (i-x,j-y)
         # EITHER you were in square (x,y) at t-1
 	# and there was a wall in position p
 	# that corresponds to action a
         arglist.append(
-	  wallExpr(pos, pos_mod)
-	  & actionExpr(action_map[flipTup(pos_mod)],t-1)
-	  & logic.PropSymbolExpr("P",x,y,t-1))
+	  wallExpr(pos) \
+	  & actionExpr(action_map[flipTup(pos_mod)],t-1) \
+	  & logic.PropSymbolExpr("P", x, y, t-1))
 	# OR you were in square (i,j) at t-1
 	# and took the appropriate action a
 	# to get here
