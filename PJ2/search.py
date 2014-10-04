@@ -206,164 +206,83 @@ def positionLogicPlan(problem):
     Note that STOP is not an available action.
     """
     "*** YOUR CODE HERE ***"
-    # No layouts will require above 50 timesteps
-    # as specified in the PJ2 spec.
-    T_MAX = 4 
-    # @return value is list of logic.PropSymbolExpr
-    all_exprs = []
-    # all possible actions
-    actions = [game.Directions.NORTH, \
-	game.Directions.SOUTH, \
-	game.Directions.EAST, \
-	game.Directions.WEST ]
+    # only one action per timestep
+    # only one goal state
+    # action_at_t <=> position_at_t & position_at_t+1
+    # position_at_t => no_wall_at_t
 
-    # ENCODE all walls
-    for i in range(1, problem.getWidth()):
+    initial_state_axioms = []
+    goal_state_axioms = []
+    precondition_axioms = []
+    successor_axioms = []
+    action_exclusion_axioms = []
+    expr = []
+
+    T_MAX = 4
+
+    (sx,sy) = problem.getStartState()
+    (gx,gy) = problem.getGoalState()
+    expr.append(
+	logic.PropSymbolExpr("P",sx,sy,0))
+    # there's only one start state 
+    for i in (1, problem.getWidth()):
       for j in range(1, problem.getHeight()):
-	wallExpr = logic.PropSymbolExpr("W",i,j)
-	if problem.isWall((i,j)):
-	  all_exprs.append(wallExpr)
-	else:
-	  all_exprs.append(~wallExpr)
-
-    # ENCODE restriction for single action per timestep
+	if (i,j) != (sx,sy):
+	  expr.append(
+	      ~logic.PropSymbolExpr("P",i,j, 0))
     for t in range(T_MAX):
-      # actions_for_t are
-      # possible actions taken at a single timestep
-      actions_for_t = []
-      for a in actions:
-	actions_for_t.append(
-	    logic.PropSymbolExpr(a,t))
-      all_exprs.append(
-	  exactlyOne(actions_for_t))
-
-    # ENCODE that goal must be true only once
-    # among all timesteps
-    gx, gy = problem.getGoalState()
-    goals_for_t = []
-    for t in range(T_MAX):
-      goals_for_t.append(
+      # update goal state axioms
+      goal_state_axioms.append(
 	  logic.PropSymbolExpr("P", gx, gy, t))
-    all_exprs.append(
-    	exactlyOne(goals_for_t))
+      # update action exclusion axioms
+      expr.append(
+	  exactlyOne(
+	    [logic.PropSymbolExpr(a, t) for a in problem.actions(problem.getStartState())]))
+      # update successor states 
+      '''
+      P[1,1,0] <=> 
+        P[1,1,1] & North[0] & ~P[1,2,1] |
+	P[1,1,1] & South[0] & ~P[1,0,1] |
+	...
+	P[1,2,1] & North[0]
+	P[1,0,1] & South[0] 
+      '''
+      for i in range(1,problem.getWidth()):
+        for j in range(1,problem.getHeight()):
+	  or_list = []
+	  for a in problem.actions((i,j)):
+	    #print (a, i, j)
+	    #((nx,ny),cost) =  problem.result((i,j),a)
+	    or_list.append(P(nx,ny,t+1) & A(a,t))
+	    or_list.append(P(i,j,t+1) & ~A(a,t))
+	    '''
+	    state = (i,j)
+	    ((nx,ny),cost) =  problem.result(state,a)
+	    # only use valid pairs
+	    if (nx,ny) != state:
+	      or_list.append(P(nx, ny, t+1) & A(t))
+	    else:
+	      or_list.append(P(x, y, t+1) & A(t))
+	    '''
+	  or_expr = reduce(lambda x,y: x | y, or_list)
+          expr.append(logic.to_cnf(P(i,j,t) % or_expr))
+    expr.append(
+	exactlyOne(goal_state_axioms))
+    model = logic.pycoSAT(expr)
+    b = extractActionSequence(model, [
+      game.Directions.NORTH, 
+      game.Directions.SOUTH,
+      game.Directions.EAST,
+      game.Directions.WEST])
+    print b
+    return [game.Directions.SOUTH, game.Directions.WEST] 
 
-    # ENCODE start state as given
-    start_state = problem.getStartState()
-    start_pos = logic.PropSymbolExpr("P",start_state[0], start_state[1], 0) 
-    all_exprs.append(
-	logic.PropSymbolExpr(
-	  "P",start_state[0], start_state[1], 0))
 
-    # ENCODE position requirements for each timestep
+def P(x,y,t):
+  return logic.PropSymbolExpr("P",x,y,t)
 
-    # wallExpr encodes the proper logic.PropSymbolExpr
-    # for a wall at position pos
-    wallExpr = lambda pos : \
-      logic.PropSymbolExpr("W", pos[0], pos[1])
-
-    for t in range(T_MAX):
-      pos_list = possiblePositionsFromStartForTimestep(
-	  problem, t)
-      for pos in pos_list:
-	(p,(x,y,t)) = logic.PropSymbolExpr.parseExpr(pos)
-	# don't want to enforce requirements
-	# for the start state at t = 0
-	if pos == start_state:
-	  continue
-	req_expr = makeRequirementsForPosition(problem, pos)
-
-	# pos <=> ~wallExpr(pos) & req_expr
-	# actual logic: 
-	'''
-	(~pos | (req_expr & ~wallExpr(pos)))
-	& (~(req_expr & ~wallExpr(pos)) | pos)
-	'''
-	#which expands to:
-	'''
-	(~pos | (req_expr & ~wallExpr(pos)))
-	& ((~req_expr | wallExpr(pos)) | pos)
-	'''
-
-	#CNF:
-	all_exprs.append( 
-	  (~pos | req_expr) \
-	  & (~pos | ~wallExpr((x,y))) \
-	  & (~req_expr | wallExpr((x,y)) | pos))
-	# TODO: make these seperate entries for speed?
-	# TODO: use Expr class instead for <=>
-    
-    # SOLVE all_exprs and return actions
-    model = logic.pycoSAT([logic.to_cnf(e) for e in all_exprs])
-    return extractActionSequence(model, actions)
-
-# ASSUMES pacman can only move one square per timestep.
-# returns a list of all possible positions pacman could
-# have reached from start pos in timestep t.
-# Returns a list of logic.PropSymbolExprs.
-# @param t is the timestep
-def possiblePositionsFromStartForTimestep(problem, t):
-  pos_list = []
-  x, y = problem.getStartState()
-  # account for problem bounds when iterating
-  for i in range(max(1,x-t), min(x+t+1, problem.getWidth())):
-    for j in range(max(1, y-t), min(y+t+1, problem.getHeight())):
-      pos_list.append(logic.PropSymbolExpr("P",i,j,t))
-  return pos_list 
-
-def makeRequirementsForPosition(problem, pos):
-  # wallExpr encodes the proper logic.PropSymbolExpr
-  # for a wall at position pos
-  wallExpr = lambda pos : \
-    logic.PropSymbolExpr("W", pos[0], pos[1])
-  # flipTup is used for looking up actions from current
-  # position that hit a wall in the previous timestep
-  # (this is just backwards from the regular action_map
-  # keys)
-  flipTup = lambda tup : \
-      (-1*tup[0],-1*tup[1])
-  # action_map gives the action that must lead
-  # to this position starting from (x+i, y+j) for
-  # the key (i,j)
-  action_map = {(-1,0) : game.Directions.EAST, \
-      (0, 1) : game.Directions.SOUTH, \
-      (1, 0) : game.Directions.WEST, \
-      (0, -1) : game.Directions.NORTH }
-  # actionExpr makes a logic.PropSymbolExpr
-  # given an action and timestep
-  actionExpr = lambda action, t : \
-      logic.PropSymbolExpr(action,t)
-
-  # current x pos, y pos, and timestep
-  (p,(x,y,t)) = logic.PropSymbolExpr.parseExpr(pos)
-
-  arglist = []
-  for i in range(x-1, x+1):
-    for j in range(y-1, y+1):
-      # rule out positions outside the proper range
-      if abs(i-x) != abs(j-y):
-	# position modifier
-	pos = (i,j)
-	pos_mod = (i-x,j-y)
-        # EITHER you were in square (x,y) at t-1
-	# and there was a wall in position p
-	# that corresponds to action a
-        arglist.append(
-	  wallExpr(pos) \
-	  & actionExpr(action_map[flipTup(pos_mod)],t-1) \
-	  & logic.PropSymbolExpr("P", x, y, t-1))
-	# OR you were in square (i,j) at t-1
-	# and took the appropriate action a
-	# to get here
-	# (we don't need the wall condition here
-	# because that is accounted for in the
-	# requirements for p')
-	arglist.append(
-	  actionExpr(action_map[pos_mod],t-1)
-	  & logic.PropSymbolExpr("P",i,j,t-1))
-  # return <=> statement, and make sure there is
-  # no wall at this position!
-  action_reqs = exactlyOne(arglist)
-  return action_reqs
+def A(s,t):
+  return logic.PropSymbolExpr(s,t)
 
 def foodLogicPlan(problem):
     """
