@@ -204,8 +204,18 @@ def extractActionSequence(model, actions):
     ['West', 'South', 'North']
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
-
+    action_list = []
+    time_expired = False
+    t = 0
+    while not time_expired:
+      time_expired = True
+      for a in actions:
+        key = logic.PropSymbolExpr(a,t) 
+	if key in model and model[key]:
+	  action_list.append(a)
+	  time_expired = False
+      t += 1;
+    return action_list
 
 def positionLogicPlan(problem):
     """
