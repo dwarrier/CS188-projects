@@ -208,7 +208,7 @@ def positionLogicPlan(problem):
     "*** YOUR CODE HERE ***"
     # No layouts will require above 50 timesteps
     # as specified in the PJ2 spec.
-    T_MAX = 2 
+    T_MAX = 4 
     # @return value is list of logic.PropSymbolExpr
     all_exprs = []
     # all possible actions
