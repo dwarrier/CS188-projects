@@ -217,8 +217,13 @@ def positionLogicPlan(problem):
     successor_axioms = []
     action_exclusion_axioms = []
     expr = []
+    all_actions = [
+      game.Directions.NORTH, 
+      game.Directions.SOUTH,
+      game.Directions.EAST,
+      game.Directions.WEST]
 
-    T_MAX = 4
+    T_MAX = 50 
 
     (sx,sy) = problem.getStartState()
     (gx,gy) = problem.getGoalState()
@@ -237,7 +242,7 @@ def positionLogicPlan(problem):
       # update action exclusion axioms
       expr.append(
 	  exactlyOne(
-	    [logic.PropSymbolExpr(a, t) for a in problem.actions(problem.getStartState())]))
+	    [logic.PropSymbolExpr(a, t) for a in all_actions]))
       # update successor states 
       '''
       P[1,1,0] <=> 
@@ -247,14 +252,15 @@ def positionLogicPlan(problem):
 	P[1,2,1] & North[0]
 	P[1,0,1] & South[0] 
       '''
-      for i in range(1,problem.getWidth()):
-        for j in range(1,problem.getHeight()):
+      for i in range(1,problem.getWidth() + 1):
+        for j in range(1,problem.getHeight() + 1):
 	  or_list = []
 	  for a in problem.actions((i,j)):
 	    #print (a, i, j)
-	    #((nx,ny),cost) =  problem.result((i,j),a)
+	    ((nx,ny),cost) =  problem.result((i,j),a)
 	    or_list.append(P(nx,ny,t+1) & A(a,t))
-	    or_list.append(P(i,j,t+1) & ~A(a,t))
+	    #print((i,j),a,(nx,ny))
+	    #or_list.append(P(i,j,t+1) & ~A(a,t))
 	    '''
 	    state = (i,j)
 	    ((nx,ny),cost) =  problem.result(state,a)
@@ -264,18 +270,18 @@ def positionLogicPlan(problem):
 	    else:
 	      or_list.append(P(x, y, t+1) & A(t))
 	    '''
-	  or_expr = reduce(lambda x,y: x | y, or_list)
-          expr.append(logic.to_cnf(P(i,j,t) % or_expr))
+	  print or_list,i,j
+	  if or_list:
+	    or_expr = reduce(lambda x,y: x | y, or_list)
+	    expr.append(logic.to_cnf(P(i,j,t) % or_expr))
     expr.append(
 	exactlyOne(goal_state_axioms))
     model = logic.pycoSAT(expr)
-    b = extractActionSequence(model, [
-      game.Directions.NORTH, 
-      game.Directions.SOUTH,
-      game.Directions.EAST,
-      game.Directions.WEST])
+    #print model
+    b = extractActionSequence(model, all_actions)
     print b
-    return [game.Directions.SOUTH, game.Directions.WEST] 
+    #return [game.Directions.SOUTH, game.Directions.WEST] 
+    return b
 
 
 def P(x,y,t):
