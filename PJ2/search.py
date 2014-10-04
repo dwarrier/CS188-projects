@@ -129,7 +129,6 @@ def tinyMazeSearch(problem):
     w = Directions.WEST
     return  [s, s, w, s, w, w, s, w]
 
-
 def atLeastOne(expressions) :
     """
     Given a list of logic.Expr instances, return a single logic.Expr instance in CNF (conjunctive normal form)
@@ -159,18 +158,11 @@ def atMostOne(expressions) :
     that represents the logic that at most one of the expressions in the list is true.
     """
     "*** YOUR CODE HERE ***"
-    if not expressions:
-      return logic.TRUE 
-    # Actual logic:
-    '''
-    return (expressions[0] & ~atLeastOne(expressions[1::])) \
-	| (~expressions[0] & atMostOne(expressions[1::]))
-    '''
-    # CNF:
-    return (expressions[0] | ~expressions[0]) \
-	& (expressions[0] | atMostOne(expressions[1::])) \
-	& (~expressions[0] | ~atLeastOne(expressions[1::])) \
-	& (~atLeastOne(expressions[1::]) | atMostOne(expressions[1::]))
+    expr = logic.TRUE
+    for i in range(len(expressions)):
+      for j in range(i+1, len(expressions)):
+	expr = expr & (~expressions[i] | ~expressions[j])
+    return expr 
 
 def exactlyOne(expressions) :
     """
@@ -178,19 +170,7 @@ def exactlyOne(expressions) :
     that represents the logic that exactly one of the expressions in the list is true.
     """
     "*** YOUR CODE HERE ***"
-    if not expressions:
-      return logic.FALSE 
-    # Actual logic:
-    # TODO: FIX ME!
-    return (expressions[0] & ~atLeastOne(expressions[1::])) \
-	| (~expressions[0] & exactlyOne(expressions[1::]))
-    # CNF:
-    '''
-    return (expressions[0] | ~expressions[0]) \
-	& (expressions[0] | exactlyOne(expressions[1::])) \
-	& (~expressions[0] | ~atLeastOne(expressions[1::])) \
-	& (~atLeastOne(expressions[1::]) | exactlyOne(expressions[1::]))
-    '''
+    return atMostOne(expressions) & atLeastOne(expressions)
 
 def extractActionSequence(model, actions):
     """
@@ -227,7 +207,7 @@ def positionLogicPlan(problem):
     "*** YOUR CODE HERE ***"
     # No layouts will require above 50 timesteps
     # as specified in the PJ2 spec.
-    T_MAX = 51
+    T_MAX = 2 
     # @return value is list of logic.PropSymbolExpr
     all_exprs = []
     # all possible actions
@@ -244,7 +224,6 @@ def positionLogicPlan(problem):
 	  all_exprs.append(wallExpr)
 	else:
 	  all_exprs.append(~wallExpr)
-    print("debug 1")
 
     # ENCODE restriction for single action per timestep
     for t in range(T_MAX):
@@ -256,7 +235,7 @@ def positionLogicPlan(problem):
 	    logic.PropSymbolExpr(a,t))
       all_exprs.append(
 	  exactlyOne(actions_for_t))
-    print("debug 2")
+    print("encoded actions")
 
     # ENCODE that goal must be true only once
     # among all timesteps
@@ -266,7 +245,9 @@ def positionLogicPlan(problem):
       goals_for_t.append(
 	  logic.PropSymbolExpr("P", gx, gy, t))
     all_exprs.append(
-	exactlyOne(goals_for_t))
+    	exactlyOne(goals_for_t))
+    print(goals_for_t)
+    print("encoded goals")
 
     # ENCODE start state as given
     start_state = problem.getStartState()
@@ -274,6 +255,7 @@ def positionLogicPlan(problem):
     all_exprs.append(
 	logic.PropSymbolExpr(
 	  "P",start_state[0], start_state[1], 0))
+    print("encoded start_state")
 
     # ENCODE position requirements for each timestep
 
@@ -313,6 +295,7 @@ def positionLogicPlan(problem):
 	# TODO: make these seperate entries for speed?
 	# TODO: use Expr class instead for <=>
     
+    print("encoded positions")
     # SOLVE all_exprs and return actions
     model = logic.pycoSAT(all_exprs)
     return extractActionSequence(model)
@@ -383,7 +366,9 @@ def makeRequirementsForPosition(problem, pos):
 	  & logic.PropSymbolExpr("P",i,j,t-1))
   # return <=> statement, and make sure there is
   # no wall at this position!
+  print arglist
   action_reqs = exactlyOne(arglist)
+  print("done")
   return action_reqs
 
 def foodLogicPlan(problem):
