@@ -36,6 +36,7 @@ Pacman agents (in searchAgents.py).
 import util
 import sys
 import logic
+import game
 
 class SearchProblem:
     """
@@ -128,7 +129,6 @@ def tinyMazeSearch(problem):
     w = Directions.WEST
     return  [s, s, w, s, w, w, s, w]
 
-
 def atLeastOne(expressions) :
     """
     Given a list of logic.Expr instances, return a single logic.Expr instance in CNF (conjunctive normal form)
@@ -148,9 +148,10 @@ def atLeastOne(expressions) :
     True
     """
     "*** YOUR CODE HERE ***"
-    if not expressions:
-      return logic.FALSE 
-    return expressions[0] | atLeastOne(expressions[1::])
+    expr = expressions[0]
+    for e in expressions:
+      expr = expr | e
+    return expr
 
 def atMostOne(expressions) :
     """
@@ -158,18 +159,11 @@ def atMostOne(expressions) :
     that represents the logic that at most one of the expressions in the list is true.
     """
     "*** YOUR CODE HERE ***"
-    if not expressions:
-      return logic.TRUE 
-    # Actual logic:
-    '''
-    return (expressions[0] & ~atLeastOne(expressions[1::])) \
-	| (~expressions[0] & atMostOne(expressions[1::]))
-    '''
-    # CNF:
-    return (expressions[0] | ~expressions[0]) \
-	& (expressions[0] | atMostOne(expressions[1::])) \
-	& (~expressions[0] | ~atLeastOne(expressions[1::])) \
-	& (~atLeastOne(expressions[1::]) | atMostOne(expressions[1::]))
+    expr = expressions[0] | ~expressions[0]
+    for i in range(len(expressions)):
+      for j in range(i+1, len(expressions)):
+	expr = expr & (~expressions[i] | ~expressions[j])
+    return expr 
 
 def exactlyOne(expressions) :
     """
@@ -177,19 +171,7 @@ def exactlyOne(expressions) :
     that represents the logic that exactly one of the expressions in the list is true.
     """
     "*** YOUR CODE HERE ***"
-    if not expressions:
-      return logic.FALSE 
-    # Actual logic:
-    '''
-    return (expressions[0] & ~atLeastOne(expressions[1::])) \
-	| (~expressions[0] & exactlyOne(expressions[1::]))
-    '''
-    # CNF:
-    return (expressions[0] | ~expressions[0]) \
-	& (expressions[0] | exactlyOne(expressions[1::])) \
-	& (~expressions[0] | ~atLeastOne(expressions[1::])) \
-	& (~atLeastOne(expressions[1::]) | exactlyOne(expressions[1::]))
-
+    return atMostOne(expressions) & atLeastOne(expressions)
 
 def extractActionSequence(model, actions):
     """
@@ -224,8 +206,107 @@ def positionLogicPlan(problem):
     Note that STOP is not an available action.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # only one action per timestep
+    # only one goal state
+    # action_at_t <=> position_at_t & position_at_t+1
+    # position_at_t => no_wall_at_t
 
+    initial_state_axioms = []
+    goal_state_axioms = []
+    precondition_axioms = []
+    successor_axioms = []
+    action_exclusion_axioms = []
+    expr = []
+    all_actions = [
+      game.Directions.NORTH, 
+      game.Directions.SOUTH,
+      game.Directions.EAST,
+      game.Directions.WEST]
+    dN,dS,dE,dW = all_actions
+
+    T_MAX = 25 
+
+    (sx,sy) = problem.getStartState()
+    (gx,gy) = problem.getGoalState()
+    expr.append(
+	logic.PropSymbolExpr("P",sx,sy,0))
+    # there's only one start state 
+    '''
+    for i in range(1, problem.getWidth() + 1):
+      for j in range(1, problem.getHeight() + 1):
+    '''
+    for i in range(0, problem.getWidth() + 2):
+      for j in range(0, problem.getHeight() + 2):
+	if (i,j) != (sx,sy):
+	  expr.append(
+	      ~logic.PropSymbolExpr("P",i,j, 0))
+    # walls.
+    '''
+    for i in range(1, problem.getWidth() + 1):
+      for j in range(1, problem.getHeight() + 1):
+    '''
+    for i in range(0, problem.getWidth() + 2):
+      for j in range(0, problem.getHeight() + 2):
+	if problem.isWall((i,j)) \
+	   | (i > problem.getWidth()) \
+	   | (j > problem.getHeight()):
+	  expr.append(W(i,j))
+	else:
+	  expr.append(~W(i,j))
+    # update action exclusion axioms
+    expr.append(
+	exactlyOne(
+	  [logic.PropSymbolExpr(a, 0) for a in all_actions]))
+    model = False
+    # start depth at minimum possible timestep count
+    depth = abs(sx-gx) + abs(sy-gy) 
+    
+    while (model == False) and (depth < T_MAX):
+      copy = [logic.expr(s) for s in expr]
+      model = depthLimitedPlan(problem, all_actions, copy, depth)
+      depth += 1
+    
+    return extractActionSequence(model, all_actions)
+
+def depthLimitedPlan(problem, all_actions, expr, depth):
+    (gx,gy) = problem.getGoalState()
+    goal_state_axioms = []
+    dN,dS,dE,dW = all_actions
+    for t in range(1, depth):
+      # update goal state axioms
+      goal_state_axioms.append(
+	  logic.PropSymbolExpr("P", gx, gy, t))
+      # update action exclusion axioms
+      expr.append(
+	  exactlyOne(
+	    [logic.PropSymbolExpr(a, t) for a in all_actions]))
+      # update successor states 
+      for i in range(1,problem.getWidth() + 1):
+        for j in range(1,problem.getHeight() + 1):
+
+	  expr.append( logic.to_cnf(
+	  P(i,j,t) % 
+	    (~W(i,j) & (
+	    cnf((P(i-1, j,t-1) & A(dE,t-1) & ~W(i-1,j))) |
+	    cnf((P(i+1, j,t-1) & A(dW,t-1) & ~W(i+1,j))) |
+	    cnf((P(i, j-1,t-1) & A(dN,t-1) & ~W(i,j-1))) |
+	    cnf((P(i, j+1,t-1) & A(dS,t-1) & ~W(i,j+1))))
+	    )))
+    expr.append(
+	exactlyOne(goal_state_axioms))
+    model = logic.pycoSAT(expr)
+    return model 
+
+
+cnf = logic.to_cnf
+def P(x,y,t):
+  return logic.PropSymbolExpr("P",x,y,t)
+
+def A(s,t):
+  return logic.PropSymbolExpr(s,t)
+
+def W(x,y):
+  return logic.PropSymbolExpr("W",x,y)
 
 def foodLogicPlan(problem):
     """
