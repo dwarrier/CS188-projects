@@ -224,7 +224,7 @@ def positionLogicPlan(problem):
       game.Directions.WEST]
     dN,dS,dE,dW = all_actions
 
-    T_MAX = 20 
+    T_MAX = 25 
 
     (sx,sy) = problem.getStartState()
     (gx,gy) = problem.getGoalState()
@@ -257,8 +257,22 @@ def positionLogicPlan(problem):
     expr.append(
 	exactlyOne(
 	  [logic.PropSymbolExpr(a, 0) for a in all_actions]))
+    model = False
+    # start depth at minimum possible timestep count
+    depth = abs(sx-gx) + abs(sy-gy) 
+    
+    while (model == False) and (depth < T_MAX):
+      copy = [logic.expr(s) for s in expr]
+      model = depthLimitedPlan(problem, all_actions, copy, depth)
+      depth += 1
+    
+    return extractActionSequence(model, all_actions)
 
-    for t in range(1, T_MAX):
+def depthLimitedPlan(problem, all_actions, expr, depth):
+    (gx,gy) = problem.getGoalState()
+    goal_state_axioms = []
+    dN,dS,dE,dW = all_actions
+    for t in range(1, depth):
       # update goal state axioms
       goal_state_axioms.append(
 	  logic.PropSymbolExpr("P", gx, gy, t))
@@ -267,57 +281,24 @@ def positionLogicPlan(problem):
 	  exactlyOne(
 	    [logic.PropSymbolExpr(a, t) for a in all_actions]))
       # update successor states 
-      '''
-      P[1,1,0] <=> 
-        P[1,1,1] & North[0] & ~P[1,2,1] |
-	P[1,1,1] & South[0] & ~P[1,0,1] |
-	...
-	P[1,2,1] & North[0]
-	P[1,0,1] & South[0] 
-      '''
       for i in range(1,problem.getWidth() + 1):
         for j in range(1,problem.getHeight() + 1):
 
 	  expr.append( logic.to_cnf(
 	  P(i,j,t) % 
 	    (~W(i,j) & (
-	    (P(i-1, j,t-1) & A(dE,t-1) & ~W(i-1,j)) |
-	    (P(i+1, j,t-1) & A(dW,t-1) & ~W(i+1,j)) |
-	    (P(i, j-1,t-1) & A(dN,t-1) & ~W(i,j-1)) |
-	    (P(i, j+1,t-1) & A(dS,t-1) & ~W(i,j+1)))
+	    cnf((P(i-1, j,t-1) & A(dE,t-1) & ~W(i-1,j))) |
+	    cnf((P(i+1, j,t-1) & A(dW,t-1) & ~W(i+1,j))) |
+	    cnf((P(i, j-1,t-1) & A(dN,t-1) & ~W(i,j-1))) |
+	    cnf((P(i, j+1,t-1) & A(dS,t-1) & ~W(i,j+1))))
 	    )))
-
-	  
-	  '''
-	  or_list = []
-	  for a in problem.actions((i,j)):
-	    #print (a, i, j)
-	    ((nx,ny),cost) =  problem.result((i,j),a)
-	    or_list.append(P(nx,ny,t+1) & A(a,t))
-	    #print((i,j),a,(nx,ny))
-	    #or_list.append(P(i,j,t+1) & ~A(a,t))
-	    state = (i,j)
-	    ((nx,ny),cost) =  problem.result(state,a)
-	    # only use valid pairs
-	    if (nx,ny) != state:
-	      or_list.append(P(nx, ny, t+1) & A(t))
-	    else:
-	      or_list.append(P(x, y, t+1) & A(t))
-	  print or_list,i,j
-	  if or_list:
-	    or_expr = reduce(lambda x,y: x | y, or_list)
-	    expr.append(logic.to_cnf(P(i,j,t) % or_expr))
-	  '''
     expr.append(
 	exactlyOne(goal_state_axioms))
     model = logic.pycoSAT(expr)
-    print model
-    b = extractActionSequence(model, all_actions)
-    print b
-    #return [game.Directions.SOUTH, game.Directions.WEST] 
-    return b
+    return model 
 
 
+cnf = logic.to_cnf
 def P(x,y,t):
   return logic.PropSymbolExpr("P",x,y,t)
 
