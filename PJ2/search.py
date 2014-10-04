@@ -222,20 +222,43 @@ def positionLogicPlan(problem):
       game.Directions.SOUTH,
       game.Directions.EAST,
       game.Directions.WEST]
+    dN,dS,dE,dW = all_actions
 
-    T_MAX = 50 
+    T_MAX = 51 
 
     (sx,sy) = problem.getStartState()
     (gx,gy) = problem.getGoalState()
     expr.append(
 	logic.PropSymbolExpr("P",sx,sy,0))
     # there's only one start state 
-    for i in (1, problem.getWidth()):
-      for j in range(1, problem.getHeight()):
+    '''
+    for i in range(1, problem.getWidth() + 1):
+      for j in range(1, problem.getHeight() + 1):
+    '''
+    for i in range(0, problem.getWidth() + 2):
+      for j in range(0, problem.getHeight() + 2):
 	if (i,j) != (sx,sy):
 	  expr.append(
 	      ~logic.PropSymbolExpr("P",i,j, 0))
-    for t in range(T_MAX):
+    # walls.
+    '''
+    for i in range(1, problem.getWidth() + 1):
+      for j in range(1, problem.getHeight() + 1):
+    '''
+    for i in range(0, problem.getWidth() + 2):
+      for j in range(0, problem.getHeight() + 2):
+	if problem.isWall((i,j)) \
+	   | (i > problem.getWidth()) \
+	   | (j > problem.getHeight()):
+	  expr.append(W(i,j))
+	else:
+	  expr.append(~W(i,j))
+    # update action exclusion axioms
+    expr.append(
+	exactlyOne(
+	  [logic.PropSymbolExpr(a, 0) for a in all_actions]))
+
+    for t in range(1, T_MAX):
       # update goal state axioms
       goal_state_axioms.append(
 	  logic.PropSymbolExpr("P", gx, gy, t))
@@ -254,6 +277,18 @@ def positionLogicPlan(problem):
       '''
       for i in range(1,problem.getWidth() + 1):
         for j in range(1,problem.getHeight() + 1):
+
+	  expr.append( logic.to_cnf(
+	  P(i,j,t) % 
+	    (~W(i,j) & (
+	    (P(i-1, j,t-1) & A(dE,t-1) & ~W(i-1,j)) |
+	    (P(i+1, j,t-1) & A(dW,t-1) & ~W(i+1,j)) |
+	    (P(i, j-1,t-1) & A(dN,t-1) & ~W(i,j-1)) |
+	    (P(i, j+1,t-1) & A(dS,t-1) & ~W(i,j+1)))
+	    )))
+
+	  
+	  '''
 	  or_list = []
 	  for a in problem.actions((i,j)):
 	    #print (a, i, j)
@@ -261,7 +296,6 @@ def positionLogicPlan(problem):
 	    or_list.append(P(nx,ny,t+1) & A(a,t))
 	    #print((i,j),a,(nx,ny))
 	    #or_list.append(P(i,j,t+1) & ~A(a,t))
-	    '''
 	    state = (i,j)
 	    ((nx,ny),cost) =  problem.result(state,a)
 	    # only use valid pairs
@@ -269,15 +303,15 @@ def positionLogicPlan(problem):
 	      or_list.append(P(nx, ny, t+1) & A(t))
 	    else:
 	      or_list.append(P(x, y, t+1) & A(t))
-	    '''
 	  print or_list,i,j
 	  if or_list:
 	    or_expr = reduce(lambda x,y: x | y, or_list)
 	    expr.append(logic.to_cnf(P(i,j,t) % or_expr))
+	  '''
     expr.append(
 	exactlyOne(goal_state_axioms))
     model = logic.pycoSAT(expr)
-    #print model
+    print model
     b = extractActionSequence(model, all_actions)
     print b
     #return [game.Directions.SOUTH, game.Directions.WEST] 
@@ -289,6 +323,9 @@ def P(x,y,t):
 
 def A(s,t):
   return logic.PropSymbolExpr(s,t)
+
+def W(x,y):
+  return logic.PropSymbolExpr("W",x,y)
 
 def foodLogicPlan(problem):
     """
