@@ -233,7 +233,7 @@ def positionLogicPlan(problem):
     actions = [game.Directions.NORTH, \
 	game.Directions.SOUTH, \
 	game.Directions.EAST, \
-	game.Directions.WEST }
+	game.Directions.WEST ]
 
     # ENCODE all walls
     for i in range(1, problem.getWidth()):
@@ -259,7 +259,7 @@ def positionLogicPlan(problem):
     # among all timesteps
     gx, gy = problem.getGoalState()
     goals_for_t = []
-    for t in range(T_MAX)
+    for t in range(T_MAX):
       goals_for_t.append(
 	  logic.PropSymbolExpr("P", gx, gy, t))
     all_exprs.append(
@@ -288,11 +288,26 @@ def positionLogicPlan(problem):
 	if pos == start_state:
 	  continue
 	req_expr = makeRequirementsForPosition(pos, action_list)
+
+	# pos <=> ~wallExpr(pos) & req_expr
+	# actual logic: 
+	'''
+	(~pos | (req_expr & ~wallExpr(pos)))
+	& (~(req_expr & ~wallExpr(pos)) | pos)
+	'''
+	#which expands to:
+	'''
+	(~pos | (req_expr & ~wallExpr(pos)))
+	& ((~req_expr | wallExpr(pos)) | pos)
+	'''
+
+	#CNF:
 	all_exprs.append( 
-	  ~wallExpr(pos)
-	  & (~pos | req_expr) 
-	  & (~req_expr | pos))
+	  (~pos | req_expr) \
+	  & (~pos | ~wallExpr(pos)) \
+	  & (~req_expr | wallExpr(pos) | pos))
 	# TODO: make these seperate entries for speed?
+	# TODO: use Expr class instead for <=>
     
     # SOLVE all_exprs and return actions
     model = logic.pycoSAT(all_exprs)
@@ -366,11 +381,6 @@ def makeRequirementsForPosition(problem, pos):
   # no wall at this position!
   action_reqs = exactlyOne(arglist)
   return action_reqs
-
-# Returns a logic.PropSymbolExpr to check whether
-# there is a wall in the given position.
-def wallExistsAt(position):
-
 
 def foodLogicPlan(problem):
     """
