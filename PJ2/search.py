@@ -224,7 +224,7 @@ def positionLogicPlan(problem):
       game.Directions.WEST]
     dN,dS,dE,dW = all_actions
 
-    T_MAX = 51 
+    T_MAX = 20 
 
     (sx,sy) = problem.getStartState()
     (gx,gy) = problem.getGoalState()
