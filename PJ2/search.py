@@ -148,9 +148,10 @@ def atLeastOne(expressions) :
     True
     """
     "*** YOUR CODE HERE ***"
-    if not expressions:
-      return logic.FALSE 
-    return expressions[0] | atLeastOne(expressions[1::])
+    expr = expressions[0]
+    for e in expressions:
+      expr = expr | e
+    return expr
 
 def atMostOne(expressions) :
     """
@@ -158,7 +159,7 @@ def atMostOne(expressions) :
     that represents the logic that at most one of the expressions in the list is true.
     """
     "*** YOUR CODE HERE ***"
-    expr = logic.TRUE
+    expr = expressions[0] | ~expressions[0]
     for i in range(len(expressions)):
       for j in range(i+1, len(expressions)):
 	expr = expr & (~expressions[i] | ~expressions[j])
@@ -235,7 +236,6 @@ def positionLogicPlan(problem):
 	    logic.PropSymbolExpr(a,t))
       all_exprs.append(
 	  exactlyOne(actions_for_t))
-    print("encoded actions")
 
     # ENCODE that goal must be true only once
     # among all timesteps
@@ -246,8 +246,6 @@ def positionLogicPlan(problem):
 	  logic.PropSymbolExpr("P", gx, gy, t))
     all_exprs.append(
     	exactlyOne(goals_for_t))
-    print(goals_for_t)
-    print("encoded goals")
 
     # ENCODE start state as given
     start_state = problem.getStartState()
@@ -255,7 +253,6 @@ def positionLogicPlan(problem):
     all_exprs.append(
 	logic.PropSymbolExpr(
 	  "P",start_state[0], start_state[1], 0))
-    print("encoded start_state")
 
     # ENCODE position requirements for each timestep
 
@@ -295,10 +292,9 @@ def positionLogicPlan(problem):
 	# TODO: make these seperate entries for speed?
 	# TODO: use Expr class instead for <=>
     
-    print("encoded positions")
     # SOLVE all_exprs and return actions
-    model = logic.pycoSAT(all_exprs)
-    return extractActionSequence(model)
+    model = logic.pycoSAT([logic.to_cnf(e) for e in all_exprs])
+    return extractActionSequence(model, actions)
 
 # ASSUMES pacman can only move one square per timestep.
 # returns a list of all possible positions pacman could
@@ -366,9 +362,7 @@ def makeRequirementsForPosition(problem, pos):
 	  & logic.PropSymbolExpr("P",i,j,t-1))
   # return <=> statement, and make sure there is
   # no wall at this position!
-  print arglist
   action_reqs = exactlyOne(arglist)
-  print("done")
   return action_reqs
 
 def foodLogicPlan(problem):
