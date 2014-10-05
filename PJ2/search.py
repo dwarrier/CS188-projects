@@ -192,12 +192,16 @@ def extractActionSequence(model, actions):
     while not time_expired:
       time_expired = True
       for a in actions:
-        key = logic.PropSymbolExpr(a,t) 
+        key = PSE(a,t) 
 	if key in model and model[key]:
 	  action_list.append(a)
 	  time_expired = False
       t += 1;
     return action_list
+
+ALL_ACTIONS = dN, dE, dS, dW = \
+    [ game.Directions.NORTH, game.Directions.EAST,
+      game.Directions.SOUTH, game.Directions.WEST ]
 
 def positionLogicPlan(problem):
     """
@@ -206,107 +210,101 @@ def positionLogicPlan(problem):
     Note that STOP is not an available action.
     """
     "*** YOUR CODE HERE ***"
-    # only one action per timestep
-    # only one goal state
-    # action_at_t <=> position_at_t & position_at_t+1
-    # position_at_t => no_wall_at_t
+    T_MAX = 51
 
-    initial_state_axioms = []
-    goal_state_axioms = []
-    precondition_axioms = []
-    successor_axioms = []
-    action_exclusion_axioms = []
-    expr = []
-    all_actions = [
-      game.Directions.NORTH, 
-      game.Directions.SOUTH,
-      game.Directions.EAST,
-      game.Directions.WEST]
-    dN,dS,dE,dW = all_actions
+    pycoSAT_args = []
 
-    T_MAX = 25 
-
-    (sx,sy) = problem.getStartState()
-    (gx,gy) = problem.getGoalState()
-    expr.append(
-	logic.PropSymbolExpr("P",sx,sy,0))
+    # ENCODE start state axioms
     # there's only one start state 
-    '''
-    for i in range(1, problem.getWidth() + 1):
-      for j in range(1, problem.getHeight() + 1):
-    '''
+    (sx,sy) = problem.getStartState()
+    pycoSAT_args.append(
+	PSE("P",sx,sy,0))
     for i in range(0, problem.getWidth() + 2):
       for j in range(0, problem.getHeight() + 2):
 	if (i,j) != (sx,sy):
-	  expr.append(
-	      ~logic.PropSymbolExpr("P",i,j, 0))
-    # walls.
-    '''
-    for i in range(1, problem.getWidth() + 1):
-      for j in range(1, problem.getHeight() + 1):
-    '''
+	  pycoSAT_args.append(
+	      ~PSE("P",i,j, 0))
+
+    # ENCODE walls.
     for i in range(0, problem.getWidth() + 2):
       for j in range(0, problem.getHeight() + 2):
 	if problem.isWall((i,j)) \
 	   | (i > problem.getWidth()) \
 	   | (j > problem.getHeight()):
-	  expr.append(W(i,j))
+	  pycoSAT_args.append(W(i,j))
 	else:
-	  expr.append(~W(i,j))
-    # update action exclusion axioms
-    expr.append(
+	  pycoSAT_args.append(~W(i,j))
+
+    # ENCODE initial action exclusion axioms
+    pycoSAT_args.append(
 	exactlyOne(
-	  [logic.PropSymbolExpr(a, 0) for a in all_actions]))
-    model = False
+	  [PSE(a, 0) for a in ALL_ACTIONS]))
+
+    # PERFORM ITERATIVE DEEPENING.
     # start depth at minimum possible timestep count
+    # to save time.
+    model = False
+    (gx,gy) = problem.getGoalState()
     depth = abs(sx-gx) + abs(sy-gy) 
     
     while (model == False) and (depth < T_MAX):
-      copy = [logic.expr(s) for s in expr]
-      model = depthLimitedPlan(problem, all_actions, copy, depth)
+      copy = [logic.expr(s) for s in pycoSAT_args]
+      model = depthLimitedPlan(problem, copy, depth)
       depth += 1
     
-    return extractActionSequence(model, all_actions)
+    return extractActionSequence(model, ALL_ACTIONS)
 
-def depthLimitedPlan(problem, all_actions, expr, depth):
+def depthLimitedPlan(problem, initial_expr_list, depth):
     (gx,gy) = problem.getGoalState()
     goal_state_axioms = []
-    dN,dS,dE,dW = all_actions
+
     for t in range(1, depth):
-      # update goal state axioms
-      goal_state_axioms.append(
-	  logic.PropSymbolExpr("P", gx, gy, t))
-      # update action exclusion axioms
-      expr.append(
+
+      # UPDATE goal state axioms
+      updatePositionPlanGoalStates(goal_state_axioms, gx, gy, t)
+
+      # UPDATE action exclusion axioms
+      initial_expr_list.append(
 	  exactlyOne(
-	    [logic.PropSymbolExpr(a, t) for a in all_actions]))
-      # update successor states 
+	    [PSE(a, t) for a in ALL_ACTIONS]))
+
+      # ENCODE successor states 
       for i in range(1,problem.getWidth() + 1):
         for j in range(1,problem.getHeight() + 1):
+	  updatePositionPlanSuccStates(initial_expr_list,i,j,t)
 
-	  expr.append( logic.to_cnf(
-	  P(i,j,t) % 
-	    (~W(i,j) & (
-	    cnf((P(i-1, j,t-1) & A(dE,t-1) & ~W(i-1,j))) |
-	    cnf((P(i+1, j,t-1) & A(dW,t-1) & ~W(i+1,j))) |
-	    cnf((P(i, j-1,t-1) & A(dN,t-1) & ~W(i,j-1))) |
-	    cnf((P(i, j+1,t-1) & A(dS,t-1) & ~W(i,j+1))))
-	    )))
-    expr.append(
-	exactlyOne(goal_state_axioms))
-    model = logic.pycoSAT(expr)
+    # ENCODE goal state axioms
+    initial_expr_list.append(exactlyOne(goal_state_axioms))
+    model = logic.pycoSAT(initial_expr_list)
     return model 
 
+def updatePositionPlanGoalStates(goal_state_list,gx,gy,t):
+  goal_state_list.append(PSE("P", gx, gy, t))
 
-cnf = logic.to_cnf
+def updatePositionPlanSuccStates(expr_list,i,j,t):
+  expr_list.append(CNF(
+      P(i,j,t) % \
+	(~W(i,j) & (
+	(P(i-1, j,t-1) & A(dE,t-1) & ~W(i-1,j)) |
+	(P(i+1, j,t-1) & A(dW,t-1) & ~W(i+1,j)) |
+	(P(i, j-1,t-1) & A(dN,t-1) & ~W(i,j-1)) |
+	(P(i, j+1,t-1) & A(dS,t-1) & ~W(i,j+1))))))
+
+# shortcuts
+CNF = logic.to_cnf
+PSE = logic.PropSymbolExpr
+
 def P(x,y,t):
-  return logic.PropSymbolExpr("P",x,y,t)
+  return PSE("P",x,y,t)
 
 def A(s,t):
-  return logic.PropSymbolExpr(s,t)
+  return PSE(s,t)
 
 def W(x,y):
-  return logic.PropSymbolExpr("W",x,y)
+  return PSE("W",x,y)
+
+def F(x,y,t):
+  return PSE("F",x,y,t)
 
 def foodLogicPlan(problem):
     """
