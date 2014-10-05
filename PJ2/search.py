@@ -308,6 +308,9 @@ def A(s,t):
 def W(x,y):
   return logic.PropSymbolExpr("W",x,y)
 
+def F(x,y,t):
+  return logic.PropSymbolExpr("F",x,y,t)
+
 def foodLogicPlan(problem):
     """
     Given an instance of a FoodSearchProblem, return a list of actions that help Pacman
