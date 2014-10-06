@@ -225,16 +225,6 @@ def positionLogicPlan(problem):
 	  pycoSAT_args.append(
 	      ~PSE("P",i,j, 0))
 
-    # ENCODE walls.
-    for i in range(0, problem.getWidth() + 2):
-      for j in range(0, problem.getHeight() + 2):
-	if problem.isWall((i,j)) \
-	   | (i > problem.getWidth()) \
-	   | (j > problem.getHeight()):
-	  pycoSAT_args.append(W(i,j))
-	else:
-	  pycoSAT_args.append(~W(i,j))
-
     # ENCODE initial action exclusion axioms
     pycoSAT_args.append(
 	exactlyOne(
@@ -294,9 +284,109 @@ def updatePositionPlanSuccStates(expr_list,i,j,t):
 	(P(i, j-1,t-1) & A(dN,t-1)) |
 	(P(i, j+1,t-1) & A(dS,t-1))))
 
+def foodLogicPlan(problem):
+    """
+    Given an instance of a FoodSearchProblem, return a list of actions that help Pacman
+    eat all of the food.
+    Available actions are game.Directions.{NORTH,SOUTH,EAST,WEST}
+    Note that STOP is not an available action.
+    """
+    "*** YOUR CODE HERE ***"
+    T_MAX = 51
+
+    pycoSAT_args = []
+
+    # ENCODE start state axioms
+    # there's only one start state 
+    (sx,sy) = problem.getStartState()[0]
+    pycoSAT_args.append(
+	PSE("P",sx,sy,0))
+    for i in range(0, problem.getWidth() + 2):
+      for j in range(0, problem.getHeight() + 2):
+	if (i,j) != (sx,sy):
+	  pycoSAT_args.append(
+	      ~PSE("P",i,j, 0))
+
+    # food start states
+    foodGrid = problem.getStartState()[1]
+    for i in range(1,problem.getWidth() + 1):
+        for j in range(1,problem.getHeight() + 1):
+            if foodGrid[i][j]:
+                pycoSAT_args.append(F(i,j,0))
+            else:
+                pycoSAT_args.append(~F(i,j,0))
+
+    # ENCODE initial action exclusion axioms
+    pycoSAT_args.append(
+	exactlyOne(
+	  [PSE(a, 0) for a in ALL_ACTIONS]))
+
+    # PERFORM ITERATIVE DEEPENING.
+    # start depth at minimum possible timestep count
+    # to save time.
+    model = False
+    depth = foodGrid.count() 
+    
+    while (model == False) and (depth < T_MAX):
+      copy = [logic.expr(s) for s in pycoSAT_args]
+      model = foodDepthLimitedPlan(problem, copy, depth)
+      depth += 1
+    
+    return extractActionSequence(model, ALL_ACTIONS)
+
+def foodDepthLimitedPlan(problem, initial_expr_list, depth):
+    goal_state_axioms = []
+
+    for t in range(1, depth):
+
+      # UPDATE goal state axioms
+      updateFoodPlanGoalStates(initial_expr_list,goal_state_axioms, problem, t)
+
+      # UPDATE action exclusion axioms
+      initial_expr_list.append(
+	  exactlyOne(
+	    [PSE(a, t) for a in ALL_ACTIONS]))
+
+      # UPDATE walls
+      for i in range(0,problem.getWidth() + 2):
+        for j in range(0,problem.getHeight() + 2):
+	  if problem.isWall((i,j)):
+	    initial_expr_list.append(~P(i,j,t))
+
+      # ENCODE successor states 
+      for i in range(1,problem.getWidth() + 1):
+        for j in range(1,problem.getHeight() + 1):
+	  updateFoodPlanSuccStates(initial_expr_list,i,j,t)
+
+    # ENCODE goal state axioms
+    initial_expr_list.append(CNF(exactlyOne(goal_state_axioms)))
+    model = logic.pycoSAT(initial_expr_list)
+    return model 
+
+def updateFoodPlanGoalStates(expr_list,goal_state_list,problem,t):
+    foods = []
+    for i in range(1,problem.getWidth() + 1):
+        for j in range(1,problem.getHeight() + 1):
+            foods.append(F(i,j,t))
+    expr_list.append(CNF(G(t) % CNF(~atLeastOne(foods))))
+    goal_state_list.append(G(t))
+
+def updateFoodPlanSuccStates(expr_list,i,j,t):
+  expr_list.append(CNF(
+      P(i,j,t) % \
+	(P(i-1, j,t-1) & A(dE,t-1)) |
+	(P(i+1, j,t-1) & A(dW,t-1)) |
+	(P(i, j-1,t-1) & A(dN,t-1)) |
+	(P(i, j+1,t-1) & A(dS,t-1))))
+  # food successor states
+  expr_list.append(CNF(~F(i,j,t) % (~F(i,j,t-1) | P(i,j,t))))
+
 # shortcuts
 CNF = logic.to_cnf
 PSE = logic.PropSymbolExpr
+
+def G(t):
+  return PSE("G",t)
 
 def P(x,y,t):
   return PSE("P",x,y,t)
@@ -310,15 +400,8 @@ def W(x,y):
 def F(x,y,t):
   return PSE("F",x,y,t)
 
-def foodLogicPlan(problem):
-    """
-    Given an instance of a FoodSearchProblem, return a list of actions that help Pacman
-    eat all of the food.
-    Available actions are game.Directions.{NORTH,SOUTH,EAST,WEST}
-    Note that STOP is not an available action.
-    """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+
+
 
 def foodGhostLogicPlan(problem):
     """
