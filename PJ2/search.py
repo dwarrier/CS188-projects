@@ -268,6 +268,11 @@ def depthLimitedPlan(problem, initial_expr_list, depth):
 	  exactlyOne(
 	    [PSE(a, t) for a in ALL_ACTIONS]))
 
+      for i in range(0,problem.getWidth() + 2):
+        for j in range(0,problem.getHeight() + 2):
+	  if problem.isWall((i,j)):
+	    initial_expr_list.append(~P(i,j,t))
+
       # ENCODE successor states 
       for i in range(1,problem.getWidth() + 1):
         for j in range(1,problem.getHeight() + 1):
@@ -284,11 +289,10 @@ def updatePositionPlanGoalStates(goal_state_list,gx,gy,t):
 def updatePositionPlanSuccStates(expr_list,i,j,t):
   expr_list.append(CNF(
       P(i,j,t) % \
-	(~W(i,j) & (
-	(P(i-1, j,t-1) & A(dE,t-1) & ~W(i-1,j)) |
-	(P(i+1, j,t-1) & A(dW,t-1) & ~W(i+1,j)) |
-	(P(i, j-1,t-1) & A(dN,t-1) & ~W(i,j-1)) |
-	(P(i, j+1,t-1) & A(dS,t-1) & ~W(i,j+1))))))
+	(P(i-1, j,t-1) & A(dE,t-1)) |
+	(P(i+1, j,t-1) & A(dW,t-1)) |
+	(P(i, j-1,t-1) & A(dN,t-1)) |
+	(P(i, j+1,t-1) & A(dS,t-1))))
 
 # shortcuts
 CNF = logic.to_cnf
