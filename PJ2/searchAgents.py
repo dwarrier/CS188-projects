@@ -327,8 +327,7 @@ class FoodSearchProblem:
         Returns goal state for problem. Note only defined for problems that have
         a unique goal state such as PositionSearchProblem
         """
-	1/0
-        #util.raiseNotDefined()
+        util.raiseNotDefined()
         
     def actions(self, state):
         """
