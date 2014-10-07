@@ -876,6 +876,7 @@ def mapSymbolAndIndices(clauses):
                 symbol_dict[symbol] = idx
                 symbol_dict[idx] = symbol
                 idx +=1
+
     return symbol_dict
 
 def exprClausesToIndexClauses(clauses, symbol_dict):
@@ -885,8 +886,6 @@ def exprClausesToIndexClauses(clauses, symbol_dict):
     """
     clauses_int = []
     for c in clauses:
-        print c
-        print disjuncts(c),"\n"
         c_disj = disjuncts(c)
             
         c_int = []
