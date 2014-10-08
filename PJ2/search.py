@@ -434,7 +434,7 @@ def foodGhostLogicPlan(problem):
     Note that STOP is not an available action.
     """
     "*** YOUR CODE HERE ***"
-    T_MAX = 51
+    T_MAX = 52
 
     pycoSAT_args = []
 
@@ -458,12 +458,12 @@ def foodGhostLogicPlan(problem):
             else:
                 pycoSAT_args.append(~F(i,j,0))
 
+    # ghost start states
     ghost_start_positions = []
     for g in problem.getGhostStartStates():
       ghost_start_positions.append(g.getPosition())
     for sx,sy in ghost_start_positions:
       pycoSAT_args.append(E(sx,sy,0))
-      print(pycoSAT_args)
       if problem.isWall((sx + 1,sy)): 
 	pycoSAT_args.append(GW(sx,sy,0))
 	pycoSAT_args.append(~GE(sx,sy,0))
@@ -501,77 +501,7 @@ def foodGhostLogicPlan(problem):
       model = ghostDepthLimitedPlan(problem, copy, depth)
       depth += 1
     
-    print model
     return extractActionSequence(model, ALL_ACTIONS)
-    '''
-    T_MAX = 5 
-
-    pycoSAT_args = []
-
-    # ENCODE start state axioms
-    # there's only one start state 
-    (sx,sy) = problem.getStartState()[0]
-    pycoSAT_args.append(
-	PSE("P",sx,sy,0))
-    for i in range(0, problem.getWidth() + 2):
-      for j in range(0, problem.getHeight() + 2):
-	if (i,j) != (sx,sy):
-	  pycoSAT_args.append(
-	      ~PSE("P",i,j, 0))
-
-    # food start states
-    foodGrid = problem.getStartState()[1]
-    for i in range(1,problem.getWidth() + 1):
-        for j in range(1,problem.getHeight() + 1):
-            if foodGrid[i][j]:
-                pycoSAT_args.append(F(i,j,0))
-            else:
-                pycoSAT_args.append(~F(i,j,0))
-
-    '''
-
-    # ghost start states
-    '''
-    ghost_start_positions = []
-    for g in problem.getGhostStartStates():
-      ghost_start_positions.append(g.getPosition())
-    for sx,sy in ghost_start_positions:
-      pycoSAT_args.append(E(sx,sy,0))
-      if problem.isWall((sx + 1,sy)): 
-	pycoSAT_args.append(GW(sx,sy,0))
-	pycoSAT_args.append(~GE(sx,sy,0))
-      else:
-	pycoSAT_args.append(~GW(sx,sy,0))
-	pycoSAT_args.append(GE(sx,sy,0))
-      pycoSAT_args.append(atMostOne([GE(sx,sy,0), GW(sx,sy,0)]))
-    '''
-    '''
-    for i in range(problem.getWidth() + 2):
-      for j in range(problem.getHeight() + 2):
-	if (i,j) not in ghost_start_positions:
-	  pycoSAT_args.append(~E(i,j,0))
-    '''	   
-    '''
-    print(pycoSAT_args)
-
-    # ENCODE initial action exclusion axioms
-    pycoSAT_args.append(
-	exactlyOne(
-	  [PSE(a, 0) for a in ALL_ACTIONS]))
-
-    # PERFORM ITERATIVE DEEPENING.
-    # start depth at minimum possible timestep count
-    # to save time.
-    model = False
-    depth = foodGrid.count() + 1
-    
-    while (model == False) and (depth < T_MAX):
-      copy = [logic.expr(s) for s in pycoSAT_args]
-      model = ghostDepthLimitedPlan(problem, copy, depth)
-      depth += 1
-    
-    return extractActionSequence(model, ALL_ACTIONS)
-    '''
 
 def ghostDepthLimitedPlan(problem, initial_expr_list, depth):
     goal_state_axioms = []
@@ -599,7 +529,7 @@ def ghostDepthLimitedPlan(problem, initial_expr_list, depth):
         for j in range(1,problem.getHeight() + 1):
 	  updateGhostPlanSuccStates(initial_expr_list,i,j,t)
 	  #added
-          initial_expr_list.append(atMostOne([GE(i,j,t), GW(i,j,t)]))
+          #initial_expr_list.append(atMostOne([GE(i,j,t), GW(i,j,t)]))
 
     # ENCODE goal state axioms
     initial_expr_list.append(CNF(exactlyOne(goal_state_axioms)))
@@ -623,30 +553,9 @@ def updateGhostPlanSuccStates(expr_list,i,j,t):
 	(P(i, j+1,t-1) & A(dS,t-1))))
 
   expr_list.append(CNF(E(i,j,t) % \
-      (GE(i-1,j,t-1) & E(i-1,j,t-1)) |
-      (GW(i+1,j,t-1) & E(i+1,j,t-1))))
-  expr_list.append(E(2,2,2))
-  expr_list.append(E(1,2,3))
+      CNF((GE(i-1,j,t-1) & E(i-1,j,t-1)) |
+      (GW(i+1,j,t-1) & E(i+1,j,t-1)))))
 
-  '''
-  expr_list.append(CNF(
-  GE(i,j,t) % \
-    (~W(i+1,j) & GE(i-1,j,t-1) & E(i-1,j,t-1)) | (GW(i,j,t-1) & W(i-1,j) & E(i,j,t))))
-
-  '''
-  '''
-  expr_list.append(CNF(
-    GE(i,j,t) % \
-      ((~W(i+1,j) & GE(i-1,j,t-1) & E(i-1,j,t-1)) | (W(i-1,j) & E(i,j,t)))))
-
-  expr_list.append(CNF(
-    GW(i,j,t) % \
-      ((~W(i-1,j) & GW(i-1,j,t-1) & E(i+1,j,t-1)) | (W(i+1,j) & E(i,j,t)))))
-  '''
-  '''
-  expr_list.append(CNF(GW(i,j,t) % \
-      (~W(i-1,j) & GW(i+1,j,t-1) & E(i+1,j,t-1)) |  (W(i+1,j) & GE(i,j,t-1) & E(i,j,t))))
-  '''
   expr_list.append(CNF(
     GE(i,j,t) % \
       ((~W(i+1,j) & GE(i-1,j,t-1) | (W(i-1,j) & GW(i+1,j,t-1))))))
