@@ -463,6 +463,7 @@ def foodGhostLogicPlan(problem):
       ghost_start_positions.append(g.getPosition())
     for sx,sy in ghost_start_positions:
       pycoSAT_args.append(E(sx,sy,0))
+      print(pycoSAT_args)
       if problem.isWall((sx + 1,sy)): 
 	pycoSAT_args.append(GW(sx,sy,0))
 	pycoSAT_args.append(~GE(sx,sy,0))
@@ -500,6 +501,7 @@ def foodGhostLogicPlan(problem):
       model = ghostDepthLimitedPlan(problem, copy, depth)
       depth += 1
     
+    print model
     return extractActionSequence(model, ALL_ACTIONS)
     '''
     T_MAX = 5 
@@ -619,9 +621,12 @@ def updateGhostPlanSuccStates(expr_list,i,j,t):
 	(P(i+1, j,t-1) & A(dW,t-1)) |
 	(P(i, j-1,t-1) & A(dN,t-1)) |
 	(P(i, j+1,t-1) & A(dS,t-1))))
+
   expr_list.append(CNF(E(i,j,t) % \
       (GE(i-1,j,t-1) & E(i-1,j,t-1)) |
       (GW(i+1,j,t-1) & E(i+1,j,t-1))))
+  expr_list.append(E(2,2,2))
+  expr_list.append(E(1,2,3))
 
   '''
   expr_list.append(CNF(
@@ -629,17 +634,27 @@ def updateGhostPlanSuccStates(expr_list,i,j,t):
     (~W(i+1,j) & GE(i-1,j,t-1) & E(i-1,j,t-1)) | (GW(i,j,t-1) & W(i-1,j) & E(i,j,t))))
 
   '''
+  '''
   expr_list.append(CNF(
     GE(i,j,t) % \
-      (~W(i+1,j) & GE(i-1,j,t-1) & E(i-1,j,t-1)) | (W(i-1,j) & E(i,j,t))))
+      ((~W(i+1,j) & GE(i-1,j,t-1) & E(i-1,j,t-1)) | (W(i-1,j) & E(i,j,t)))))
 
   expr_list.append(CNF(
     GW(i,j,t) % \
-      (~W(i-1,j) & GW(i-1,j,t-1) & E(i+1,j,t-1)) | (W(i+1,j) & E(i,j,t))))
+      ((~W(i-1,j) & GW(i-1,j,t-1) & E(i+1,j,t-1)) | (W(i+1,j) & E(i,j,t)))))
+  '''
   '''
   expr_list.append(CNF(GW(i,j,t) % \
       (~W(i-1,j) & GW(i+1,j,t-1) & E(i+1,j,t-1)) |  (W(i+1,j) & GE(i,j,t-1) & E(i,j,t))))
   '''
+  expr_list.append(CNF(
+    GE(i,j,t) % \
+      ((~W(i+1,j) & GE(i-1,j,t-1) | (W(i-1,j) & GW(i+1,j,t-1))))))
+
+  expr_list.append(CNF(
+    GW(i,j,t) % \
+      ((~W(i-1,j) & GW(i+1,j,t-1)) | (W(i+1,j) & GE(i-1,j,t-1)))))
+
   expr_list.append(CNF(P(i,j,t) >> (~E(i,j,t-1) & ~E(i,j,t))))
 
   # food successor states
