@@ -519,14 +519,12 @@ def foodGhostLogicPlan(problem):
                 pycoSAT_args.append(~F(i,j,0))
 
     '''
-    '''
     for i in range(problem.getWidth() + 2):
       for j in range(problem.getHeight() + 2):
 	if problem.isWall((i,j)):
 	  pycoSAT_args.append(W(i,j))
 	else:
 	  pycoSAT_args.append(~W(i,j))
-    '''
 
     # ghost start states
     '''
@@ -589,48 +587,20 @@ def ghostDepthLimitedPlan(problem, initial_expr_list, depth):
         for j in range(0,problem.getHeight() + 2):
 	  if problem.isWall((i,j)):
 	    initial_expr_list.append(~P(i,j,t))
+	    #added
+	    initial_expr_list.append(~E(i,j,t))
 
       # ENCODE successor states 
       for i in range(1,problem.getWidth() + 1):
         for j in range(1,problem.getHeight() + 1):
 	  updateGhostPlanSuccStates(initial_expr_list,i,j,t)
+	  #added
+          initial_expr_list.append(atMostOne([GE(i,j,t), GW(i,j,t)]))
 
     # ENCODE goal state axioms
     initial_expr_list.append(CNF(exactlyOne(goal_state_axioms)))
     model = logic.pycoSAT(initial_expr_list)
     return model 
-    '''
-    goal_state_axioms = []
-
-    for t in range(1, depth):
-
-      # UPDATE goal state axioms
-      updateGhostPlanGoalStates(initial_expr_list,goal_state_axioms, problem, t)
-
-      # UPDATE action exclusion axioms
-      initial_expr_list.append(
-	  exactlyOne(
-	    [PSE(a, t) for a in ALL_ACTIONS]))
-
-      # UPDATE walls
-      for i in range(0,problem.getWidth() + 2):
-        for j in range(0,problem.getHeight() + 2):
-	  if problem.isWall((i,j)):
-	    initial_expr_list.append(~P(i,j,t))
-	    #initial_expr_list.append(~E(i,j,t))
-     
-      # ENCODE successor states 
-      for i in range(1,problem.getWidth() + 1):
-        for j in range(1,problem.getHeight() + 1):
-	  updateGhostPlanSuccStates(initial_expr_list,i,j,t)
-          #initial_expr_list.append(atMostOne([GE(i,j,t), GW(i,j,t)]))
-
-    # ENCODE goal state axioms
-    initial_expr_list.append(CNF(exactlyOne(goal_state_axioms)))
-    model = logic.pycoSAT(initial_expr_list)
-    print model
-    return model 
-    '''
 
 def updateGhostPlanGoalStates(expr_list,goal_state_list,problem,t):
     foods = []
@@ -647,11 +617,9 @@ def updateGhostPlanSuccStates(expr_list,i,j,t):
 	(P(i+1, j,t-1) & A(dW,t-1)) |
 	(P(i, j-1,t-1) & A(dN,t-1)) |
 	(P(i, j+1,t-1) & A(dS,t-1))))
-  '''
   expr_list.append(CNF(E(i,j,t) % \
       (GE(i-1,j,t-1) & E(i-1,j,t-1)) |
       (GW(i+1,j,t-1) & E(i+1,j,t-1))))
-  '''
 
   '''
   expr_list.append(CNF(
@@ -672,9 +640,7 @@ def updateGhostPlanSuccStates(expr_list,i,j,t):
   expr_list.append(CNF(GW(i,j,t) % \
       (~W(i-1,j) & GW(i+1,j,t-1) & E(i+1,j,t-1)) |  (W(i+1,j) & GE(i,j,t-1) & E(i,j,t))))
   '''
-  #expr_list.append(CNF(P(i,j,t) % (~E(i,j,t+1) & ~E(i,j,t))))
   expr_list.append(CNF(P(i,j,t) >> ~E(i,j,t-1)))
-  #expr_list.append(A(dW,0))
 
   # food successor states
   expr_list.append(CNF(~F(i,j,t) % (~F(i,j,t-1) | P(i,j,t))))
