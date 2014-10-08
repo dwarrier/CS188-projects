@@ -203,6 +203,9 @@ ALL_ACTIONS = dN, dE, dS, dW = \
     [ game.Directions.NORTH, game.Directions.EAST,
       game.Directions.SOUTH, game.Directions.WEST ]
 
+# Use a global dict to cache successor states
+pos_succ_state_dict = {}
+
 def positionLogicPlan(problem):
     """
     Given an instance of a PositionSearchProblem, return a list of actions that lead to the goal.
@@ -211,8 +214,8 @@ def positionLogicPlan(problem):
     """
     "*** YOUR CODE HERE ***"
     T_MAX = 51
-
     pycoSAT_args = []
+    pos_succ_state_dict = {}
 
     # ENCODE start state axioms
     # there's only one start state 
@@ -277,12 +280,15 @@ def updatePositionPlanGoalStates(goal_state_list,gx,gy,t):
   goal_state_list.append(PSE("P", gx, gy, t))
 
 def updatePositionPlanSuccStates(expr_list,i,j,t):
-  expr_list.append(CNF(
-      P(i,j,t) % \
-	(P(i-1, j,t-1) & A(dE,t-1)) |
-	(P(i+1, j,t-1) & A(dW,t-1)) |
-	(P(i, j-1,t-1) & A(dN,t-1)) |
-	(P(i, j+1,t-1) & A(dS,t-1))))
+
+  if P(i,j,t) not in pos_succ_state_dict:
+    pos_succ_state_dict[P(i,j,t)] = CNF(
+	P(i,j,t) % \
+	  (P(i-1, j,t-1) & A(dE,t-1)) |
+	  (P(i+1, j,t-1) & A(dW,t-1)) |
+	  (P(i, j-1,t-1) & A(dN,t-1)) |
+	  (P(i, j+1,t-1) & A(dS,t-1)))
+  expr_list.append(pos_succ_state_dict[P(i,j,t)])
 
 def foodLogicPlan(problem):
     """
