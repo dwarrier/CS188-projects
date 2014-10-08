@@ -438,9 +438,13 @@ def foodGhostLogicPlan(problem):
     Note that STOP is not an available action.
     """
     "*** YOUR CODE HERE ***"
+    global goal_state_axioms
+
     T_MAX = 52
 
     pycoSAT_args = []
+
+    goal_state_axioms = []
 
     # ENCODE start state axioms
     # there's only one start state 
@@ -495,49 +499,41 @@ def foodGhostLogicPlan(problem):
 	  [PSE(a, 0) for a in ALL_ACTIONS]))
 
     # PERFORM ITERATIVE DEEPENING.
-    # start depth at minimum possible timestep count
-    # to save time.
     model = False
-    depth = foodGrid.count() + 1 
+    depth = 1
     
     while (model == False) and (depth < T_MAX):
-      copy = [logic.expr(s) for s in pycoSAT_args]
-      model = ghostDepthLimitedPlan(problem, copy, depth)
+      model = ghostDepthLimitedPlan(problem, pycoSAT_args, depth)
       depth += 1
     
     return extractActionSequence(model, ALL_ACTIONS)
 
-def ghostDepthLimitedPlan(problem, initial_expr_list, depth):
-    goal_state_axioms = []
+def ghostDepthLimitedPlan(problem, initial_expr_list, t):
 
-    for t in range(1, depth):
+    # UPDATE goal state axioms
+    updateGhostPlanGoalStates(initial_expr_list,goal_state_axioms, problem, t)
 
-      # UPDATE goal state axioms
-      updateGhostPlanGoalStates(initial_expr_list,goal_state_axioms, problem, t)
+    # UPDATE action exclusion axioms
+    initial_expr_list.append(
+	exactlyOne(
+	  [PSE(a, t) for a in ALL_ACTIONS]))
 
-      # UPDATE action exclusion axioms
-      initial_expr_list.append(
-	  exactlyOne(
-	    [PSE(a, t) for a in ALL_ACTIONS]))
+    # UPDATE walls
+    for i in range(0,problem.getWidth() + 2):
+      for j in range(0,problem.getHeight() + 2):
+	if problem.isWall((i,j)):
+	  initial_expr_list.append(~P(i,j,t))
+	  initial_expr_list.append(~E(i,j,t))
 
-      # UPDATE walls
-      for i in range(0,problem.getWidth() + 2):
-        for j in range(0,problem.getHeight() + 2):
-	  if problem.isWall((i,j)):
-	    initial_expr_list.append(~P(i,j,t))
-	    #added
-	    initial_expr_list.append(~E(i,j,t))
-
-      # ENCODE successor states 
-      for i in range(1,problem.getWidth() + 1):
-        for j in range(1,problem.getHeight() + 1):
-	  updateGhostPlanSuccStates(initial_expr_list,i,j,t)
-	  #added
-          #initial_expr_list.append(atMostOne([GE(i,j,t), GW(i,j,t)]))
+    # ENCODE successor states 
+    for i in range(1,problem.getWidth() + 1):
+      for j in range(1,problem.getHeight() + 1):
+	updateGhostPlanSuccStates(initial_expr_list,i,j,t)
 
     # ENCODE goal state axioms
-    initial_expr_list.append(CNF(exactlyOne(goal_state_axioms)))
-    model = logic.pycoSAT(initial_expr_list)
+    copy = [logic.expr(s) for s in initial_expr_list]
+    copy.append(CNF(exactlyOne(goal_state_axioms)))
+    model = logic.pycoSAT(copy)
     return model 
 
 def updateGhostPlanGoalStates(expr_list,goal_state_list,problem,t):
@@ -572,7 +568,6 @@ def updateGhostPlanSuccStates(expr_list,i,j,t):
 
   # food successor states
   expr_list.append(CNF(~F(i,j,t) % (~F(i,j,t-1) | P(i,j,t))))
-
 
 # Abbreviations
 plp = positionLogicPlan
