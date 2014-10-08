@@ -326,12 +326,13 @@ def foodLogicPlan(problem):
     pycoSAT_args.append(
 	exactlyOne(
 	  [PSE(a, 0) for a in ALL_ACTIONS]))
+    pycoSAT_args.append(A(dW,0))
 
     # PERFORM ITERATIVE DEEPENING.
     # start depth at minimum possible timestep count
     # to save time.
     model = False
-    depth = foodGrid.count() 
+    depth = foodGrid.count() + 1 
     
     while (model == False) and (depth < T_MAX):
       copy = [logic.expr(s) for s in pycoSAT_args]
@@ -435,7 +436,7 @@ def foodGhostLogicPlan(problem):
     """
     "*** YOUR CODE HERE ***"
 
-    T_MAX = 6 
+    T_MAX = 5 
 
     pycoSAT_args = []
 
@@ -467,20 +468,28 @@ def foodGhostLogicPlan(problem):
 	  pycoSAT_args.append(~W(i,j))
 
     # ghost start states
+    '''
+    ghost_start_positions = []
     for g in problem.getGhostStartStates():
-      sx,sy = g.getPosition()
+      ghost_start_positions.append(g.getPosition())
+    for sx,sy in ghost_start_positions:
       pycoSAT_args.append(E(sx,sy,0))
       if problem.isWall((sx + 1,sy)): 
-        pycoSAT_args.append(GW(sx,sy,0))
+	pycoSAT_args.append(GW(sx,sy,0))
+	pycoSAT_args.append(~GE(sx,sy,0))
       else:
-        pycoSAT_args.append(~GW(sx,sy,0))
+	pycoSAT_args.append(~GW(sx,sy,0))
+	pycoSAT_args.append(GE(sx,sy,0))
+      pycoSAT_args.append(atMostOne([GE(sx,sy,0), GW(sx,sy,0)]))
+    '''
+    '''
+    for i in range(problem.getWidth() + 2):
+      for j in range(problem.getHeight() + 2):
+	if (i,j) not in ghost_start_positions:
+	  pycoSAT_args.append(~E(i,j,0))
+    '''	   
+    print(pycoSAT_args)
 
-      for i in range(problem.getWidth() + 2):
-        for j in range(problem.getHeight() + 2):
-	  if (i,j) != (sx,sy):
-	    pycoSAT_args.append(~E(i,j,0))
-
-    pycoSAT_args.append(atMostOne([GE(sx,sy,0), GW(sx,sy,0)]))
     # ENCODE initial action exclusion axioms
     pycoSAT_args.append(
 	exactlyOne(
@@ -506,7 +515,6 @@ def ghostDepthLimitedPlan(problem, initial_expr_list, depth):
 
       # UPDATE goal state axioms
       updateGhostPlanGoalStates(initial_expr_list,goal_state_axioms, problem, t)
-      print(goal_state_axioms)
 
       # UPDATE action exclusion axioms
       initial_expr_list.append(
@@ -518,17 +526,18 @@ def ghostDepthLimitedPlan(problem, initial_expr_list, depth):
         for j in range(0,problem.getHeight() + 2):
 	  if problem.isWall((i,j)):
 	    initial_expr_list.append(~P(i,j,t))
-	    initial_expr_list.append(~E(i,j,t))
-
+	    #initial_expr_list.append(~E(i,j,t))
+     
       # ENCODE successor states 
       for i in range(1,problem.getWidth() + 1):
         for j in range(1,problem.getHeight() + 1):
 	  updateGhostPlanSuccStates(initial_expr_list,i,j,t)
-          initial_expr_list.append(exactlyOne([GE(i,j,t), GW(i,j,t)]))
+          #initial_expr_list.append(atMostOne([GE(i,j,t), GW(i,j,t)]))
 
     # ENCODE goal state axioms
     initial_expr_list.append(CNF(exactlyOne(goal_state_axioms)))
     model = logic.pycoSAT(initial_expr_list)
+    print model
     return model 
 
 def updateGhostPlanGoalStates(expr_list,goal_state_list,problem,t):
@@ -551,17 +560,29 @@ def updateGhostPlanSuccStates(expr_list,i,j,t):
       (GE(i-1,j,t-1) & E(i-1,j,t-1)) |
       (GW(i+1,j,t-1) & E(i+1,j,t-1))))
   '''
+
+  '''
+  expr_list.append(CNF(
+  GE(i,j,t) % \
+    (~W(i+1,j) & GE(i-1,j,t-1) & E(i-1,j,t-1)) | (GW(i,j,t-1) & W(i-1,j) & E(i,j,t))))
+
+  '''
   '''
   expr_list.append(CNF(
     GE(i,j,t) % \
-      (~W(i+1,j) & GE(i-1,j,t-1) & E(i-1,j,t-1)) | (GW(i,j,t-1) & W(i-1,j) & E(i,j,t))))
+      (~W(i+1,j) & GE(i-1,j,t-1) & E(i-1,j,t-1)) | (W(i-1,j) & E(i,j,t))))
+
+  expr_list.append(CNF(
+    GW(i,j,t) % \
+      (~W(i-1,j) & GW(i-1,j,t-1) & E(i+1,j,t-1)) | (W(i+1,j) & E(i,j,t))))
+  '''
+  '''
   expr_list.append(CNF(GW(i,j,t) % \
       (~W(i-1,j) & GW(i+1,j,t-1) & E(i+1,j,t-1)) |  (W(i+1,j) & GE(i,j,t-1) & E(i,j,t))))
   '''
-  '''
   #expr_list.append(CNF(P(i,j,t) % (~E(i,j,t+1) & ~E(i,j,t))))
-  expr_list.append(CNF(P(i,j,t) % ~E(i,j,t)))
-  '''
+  #expr_list.append(CNF(P(i,j,t) >> ~E(i,j,t-1)))
+  expr_list.append(A(dW,1))
 
   # food successor states
   expr_list.append(CNF(~F(i,j,t) % (~F(i,j,t-1) | P(i,j,t))))
@@ -570,7 +591,8 @@ def updateGhostPlanSuccStates(expr_list,i,j,t):
 # Abbreviations
 plp = positionLogicPlan
 flp = foodLogicPlan
-fglp = foodGhostLogicPlan
+#fglp = foodGhostLogicPlan
+fglp = foodLogicPlan
 
 # Some for the logic module uses pretty deep recursion on long expressions
 sys.setrecursionlimit(100000)
