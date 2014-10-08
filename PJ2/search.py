@@ -215,6 +215,7 @@ def positionLogicPlan(problem):
     Note that STOP is not an available action.
     """
     "*** YOUR CODE HERE ***"
+    global pos_succ_state_dict
     T_MAX = 51
     pycoSAT_args = []
     pos_succ_state_dict = {}
