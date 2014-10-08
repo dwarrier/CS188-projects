@@ -206,6 +206,8 @@ ALL_ACTIONS = dN, dE, dS, dW = \
 # Use a global dict to cache successor states
 pos_succ_state_dict = {}
 
+goal_state_axioms = []
+
 def positionLogicPlan(problem):
     """
     Given an instance of a PositionSearchProblem, return a list of actions that lead to the goal.
@@ -213,6 +215,7 @@ def positionLogicPlan(problem):
     Note that STOP is not an available action.
     """
     "*** YOUR CODE HERE ***"
+    global pos_succ_state_dict
     T_MAX = 51
     pycoSAT_args = []
     pos_succ_state_dict = {}
@@ -298,9 +301,12 @@ def foodLogicPlan(problem):
     Note that STOP is not an available action.
     """
     "*** YOUR CODE HERE ***"
+    global goal_state_axioms
     T_MAX = 51
 
     pycoSAT_args = []
+
+    goal_state_axioms = []
 
     # ENCODE start state axioms
     # there's only one start state 
@@ -331,42 +337,41 @@ def foodLogicPlan(problem):
     # start depth at minimum possible timestep count
     # to save time.
     model = False
-    depth = foodGrid.count() 
+    #depth = foodGrid.count() 
+    depth = 1
     
     while (model == False) and (depth < T_MAX):
-      copy = [logic.expr(s) for s in pycoSAT_args]
-      model = foodDepthLimitedPlan(problem, copy, depth)
+      model = foodDepthLimitedPlan(problem, pycoSAT_args, depth)
       depth += 1
     
     return extractActionSequence(model, ALL_ACTIONS)
 
-def foodDepthLimitedPlan(problem, initial_expr_list, depth):
-    goal_state_axioms = []
+def foodDepthLimitedPlan(problem, initial_expr_list, t):
 
-    for t in range(1, depth):
+    # UPDATE goal state axioms
+    updateFoodPlanGoalStates(initial_expr_list,goal_state_axioms, problem, t)
 
-      # UPDATE goal state axioms
-      updateFoodPlanGoalStates(initial_expr_list,goal_state_axioms, problem, t)
+    # UPDATE action exclusion axioms
+    initial_expr_list.append(
+	exactlyOne(
+	  [PSE(a, t) for a in ALL_ACTIONS]))
 
-      # UPDATE action exclusion axioms
-      initial_expr_list.append(
-	  exactlyOne(
-	    [PSE(a, t) for a in ALL_ACTIONS]))
+    # UPDATE walls
+    for i in range(0,problem.getWidth() + 2):
+      for j in range(0,problem.getHeight() + 2):
+	if problem.isWall((i,j)):
+	  initial_expr_list.append(~P(i,j,t))
 
-      # UPDATE walls
-      for i in range(0,problem.getWidth() + 2):
-        for j in range(0,problem.getHeight() + 2):
-	  if problem.isWall((i,j)):
-	    initial_expr_list.append(~P(i,j,t))
-
-      # ENCODE successor states 
-      for i in range(1,problem.getWidth() + 1):
-        for j in range(1,problem.getHeight() + 1):
-	  updateFoodPlanSuccStates(initial_expr_list,i,j,t)
+    # ENCODE successor states 
+    for i in range(1,problem.getWidth() + 1):
+      for j in range(1,problem.getHeight() + 1):
+	updateFoodPlanSuccStates(initial_expr_list,i,j,t)
 
     # ENCODE goal state axioms
-    initial_expr_list.append(CNF(exactlyOne(goal_state_axioms)))
-    model = logic.pycoSAT(initial_expr_list)
+    copy = [logic.expr(s) for s in initial_expr_list]
+    copy.append(CNF(exactlyOne(goal_state_axioms)))
+    model = logic.pycoSAT(copy)
+
     return model 
 
 def updateFoodPlanGoalStates(expr_list,goal_state_list,problem,t):
@@ -391,22 +396,37 @@ def updateFoodPlanSuccStates(expr_list,i,j,t):
 CNF = logic.to_cnf
 PSE = logic.PropSymbolExpr
 
+# Enemy (ghost)
+def E(x,y,t):
+  return PSE("E",x,y,t)
+
+# Goal
 def G(t):
   return PSE("G",t)
 
+# Pacman's position
 def P(x,y,t):
   return PSE("P",x,y,t)
 
+# Action
 def A(s,t):
   return PSE(s,t)
 
-def W(x,y):
-  return PSE("W",x,y)
-
+# Food
 def F(x,y,t):
   return PSE("F",x,y,t)
 
+# Walls
+def W(x,y):
+  return PSE("W",x,y)
 
+# ghost east
+def GE(x,y,t):
+  return PSE("GE",x,y,t)
+
+# ghost west
+def GW(x,y,t):
+  return PSE("GW",x,y,t)
 
 
 def foodGhostLogicPlan(problem):
@@ -419,13 +439,142 @@ def foodGhostLogicPlan(problem):
     Note that STOP is not an available action.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    global goal_state_axioms
 
+    T_MAX = 52
+
+    pycoSAT_args = []
+
+    goal_state_axioms = []
+
+    # ENCODE start state axioms
+    # there's only one start state 
+    (sx,sy) = problem.getStartState()[0]
+    pycoSAT_args.append(
+	PSE("P",sx,sy,0))
+    for i in range(0, problem.getWidth() + 2):
+      for j in range(0, problem.getHeight() + 2):
+	if (i,j) != (sx,sy):
+	  pycoSAT_args.append(
+	      ~PSE("P",i,j, 0))
+
+    # food start states
+    foodGrid = problem.getStartState()[1]
+    for i in range(1,problem.getWidth() + 1):
+        for j in range(1,problem.getHeight() + 1):
+            if foodGrid[i][j]:
+                pycoSAT_args.append(F(i,j,0))
+            else:
+                pycoSAT_args.append(~F(i,j,0))
+
+    # ghost start states
+    ghost_start_positions = []
+    for g in problem.getGhostStartStates():
+      ghost_start_positions.append(g.getPosition())
+    for sx,sy in ghost_start_positions:
+      pycoSAT_args.append(E(sx,sy,0))
+      if problem.isWall((sx + 1,sy)): 
+	pycoSAT_args.append(GW(sx,sy,0))
+	pycoSAT_args.append(~GE(sx,sy,0))
+      else:
+	pycoSAT_args.append(~GW(sx,sy,0))
+	pycoSAT_args.append(GE(sx,sy,0))
+      pycoSAT_args.append(atMostOne([GE(sx,sy,0), GW(sx,sy,0)]))
+
+    for i in range(problem.getWidth() + 2):
+      for j in range(problem.getHeight() + 2):
+	if (i,j) not in ghost_start_positions:
+	  pycoSAT_args.append(~E(i,j,0))
+
+    # ENCODE walls for ghosts
+    for i in range(problem.getWidth() + 2):
+      for j in range(problem.getHeight() + 2):
+	if problem.isWall((i,j)):
+	  pycoSAT_args.append(W(i,j))
+	else:
+	  pycoSAT_args.append(~W(i,j))
+
+    # ENCODE initial action exclusion axioms
+    pycoSAT_args.append(
+	exactlyOne(
+	  [PSE(a, 0) for a in ALL_ACTIONS]))
+
+    # PERFORM ITERATIVE DEEPENING.
+    model = False
+    depth = 1
+    
+    while (model == False) and (depth < T_MAX):
+      model = ghostDepthLimitedPlan(problem, pycoSAT_args, depth)
+      depth += 1
+    
+    return extractActionSequence(model, ALL_ACTIONS)
+
+def ghostDepthLimitedPlan(problem, initial_expr_list, t):
+
+    # UPDATE goal state axioms
+    updateGhostPlanGoalStates(initial_expr_list,goal_state_axioms, problem, t)
+
+    # UPDATE action exclusion axioms
+    initial_expr_list.append(
+	exactlyOne(
+	  [PSE(a, t) for a in ALL_ACTIONS]))
+
+    # UPDATE walls
+    for i in range(0,problem.getWidth() + 2):
+      for j in range(0,problem.getHeight() + 2):
+	if problem.isWall((i,j)):
+	  initial_expr_list.append(~P(i,j,t))
+	  initial_expr_list.append(~E(i,j,t))
+
+    # ENCODE successor states 
+    for i in range(1,problem.getWidth() + 1):
+      for j in range(1,problem.getHeight() + 1):
+	updateGhostPlanSuccStates(initial_expr_list,i,j,t)
+
+    # ENCODE goal state axioms
+    copy = [logic.expr(s) for s in initial_expr_list]
+    copy.append(CNF(exactlyOne(goal_state_axioms)))
+    model = logic.pycoSAT(copy)
+    return model 
+
+def updateGhostPlanGoalStates(expr_list,goal_state_list,problem,t):
+    foods = []
+    for i in range(1,problem.getWidth() + 1):
+        for j in range(1,problem.getHeight() + 1):
+            foods.append(F(i,j,t))
+    expr_list.append(CNF(G(t) % CNF(~atLeastOne(foods))))
+    goal_state_list.append(G(t))
+
+def updateGhostPlanSuccStates(expr_list,i,j,t):
+  expr_list.append(CNF(
+      P(i,j,t) % \
+	(P(i-1, j,t-1) & A(dE,t-1)) |
+	(P(i+1, j,t-1) & A(dW,t-1)) |
+	(P(i, j-1,t-1) & A(dN,t-1)) |
+	(P(i, j+1,t-1) & A(dS,t-1))))
+
+  expr_list.append(CNF(E(i,j,t) % \
+      CNF((GE(i-1,j,t-1) & E(i-1,j,t-1)) |
+      (GW(i+1,j,t-1) & E(i+1,j,t-1)))))
+
+  expr_list.append(CNF(
+    GE(i,j,t) % \
+      ((~W(i+1,j) & GE(i-1,j,t-1) | (W(i-1,j) & GW(i+1,j,t-1))))))
+
+  expr_list.append(CNF(
+    GW(i,j,t) % \
+      ((~W(i-1,j) & GW(i+1,j,t-1)) | (W(i+1,j) & GE(i-1,j,t-1)))))
+
+  expr_list.append(CNF(P(i,j,t) >> (~E(i,j,t-1) & ~E(i,j,t))))
+
+  # food successor states
+  expr_list.append(CNF(~F(i,j,t) % (~F(i,j,t-1) | P(i,j,t))))
 
 # Abbreviations
 plp = positionLogicPlan
 flp = foodLogicPlan
 fglp = foodGhostLogicPlan
+#fglp = foodLogicPlan
 
 # Some for the logic module uses pretty deep recursion on long expressions
 sys.setrecursionlimit(100000)
