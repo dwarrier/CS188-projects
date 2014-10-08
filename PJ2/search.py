@@ -462,9 +462,9 @@ def foodGhostLogicPlan(problem):
     for i in range(problem.getWidth() + 2):
       for j in range(problem.getHeight() + 2):
 	if problem.isWall((i,j)):
-	  pycoSAT_args.append(~W(i,j))
-	else:
 	  pycoSAT_args.append(W(i,j))
+	else:
+	  pycoSAT_args.append(~W(i,j))
 
     # ghost start states
     for g in problem.getGhostStartStates():
@@ -480,7 +480,7 @@ def foodGhostLogicPlan(problem):
 	  if (i,j) != (sx,sy):
 	    pycoSAT_args.append(~E(i,j,0))
 
-    pycoSAT_args.append(exactlyOne([GE(sx,sy,0), GW(sx,sy,0)]))
+    pycoSAT_args.append(atMostOne([GE(sx,sy,0), GW(sx,sy,0)]))
     # ENCODE initial action exclusion axioms
     pycoSAT_args.append(
 	exactlyOne(
@@ -546,15 +546,22 @@ def updateGhostPlanSuccStates(expr_list,i,j,t):
 	(P(i+1, j,t-1) & A(dW,t-1)) |
 	(P(i, j-1,t-1) & A(dN,t-1)) |
 	(P(i, j+1,t-1) & A(dS,t-1))))
+  '''
   expr_list.append(CNF(E(i,j,t) % \
       (GE(i-1,j,t-1) & E(i-1,j,t-1)) |
       (GW(i+1,j,t-1) & E(i+1,j,t-1))))
+  '''
+  '''
   expr_list.append(CNF(
     GE(i,j,t) % \
-      (~W(i+1,j) & GE(i-1,j,t-1)) | (GW(i,j,t-1) & W(i+1,j))))
+      (~W(i+1,j) & GE(i-1,j,t-1) & E(i-1,j,t-1)) | (GW(i,j,t-1) & W(i-1,j) & E(i,j,t))))
   expr_list.append(CNF(GW(i,j,t) % \
-      (~W(i-1,j) & GW(i+1,j,t-1)) |  (W(i-1,j) & GE(i,j,t-1))))
-  expr_list.append(CNF(P(i,j,t) % (~E(i,j,t+1) & ~E(i,j,t))))
+      (~W(i-1,j) & GW(i+1,j,t-1) & E(i+1,j,t-1)) |  (W(i+1,j) & GE(i,j,t-1) & E(i,j,t))))
+  '''
+  '''
+  #expr_list.append(CNF(P(i,j,t) % (~E(i,j,t+1) & ~E(i,j,t))))
+  expr_list.append(CNF(P(i,j,t) % ~E(i,j,t)))
+  '''
 
   # food successor states
   expr_list.append(CNF(~F(i,j,t) % (~F(i,j,t-1) | P(i,j,t))))
