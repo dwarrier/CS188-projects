@@ -202,6 +202,8 @@ def extractActionSequence(model, actions):
 ALL_ACTIONS = dN, dE, dS, dW = \
     [ game.Directions.NORTH, game.Directions.EAST,
       game.Directions.SOUTH, game.Directions.WEST ]
+succ_state_dict = {}
+goal_state_axioms = []
 
 # Use a global dict to cache successor states
 pos_succ_state_dict = {}
@@ -214,7 +216,7 @@ def positionLogicPlan(problem):
     """
     "*** YOUR CODE HERE ***"
     T_MAX = 51
-
+    succ_state_dict = {}
     pycoSAT_args = []
     pos_succ_state_dict = {}
 
@@ -239,20 +241,22 @@ def positionLogicPlan(problem):
     # to save time.
     model = False
     (gx,gy) = problem.getGoalState()
-    depth = abs(sx-gx) + abs(sy-gy) 
+    #depth = abs(sx-gx) + abs(sy-gy) 
+    depth = 1
     
     while (model == False) and (depth < T_MAX):
-      copy = [logic.expr(s) for s in pycoSAT_args]
-      model = depthLimitedPlan(problem, copy, depth)
+      #copy = [logic.expr(s) for s in pycoSAT_args]
+      #model = depthLimitedPlan(problem, copy, depth)
+      model = depthLimitedPlan(problem, pycoSAT_args, depth)
       depth += 1
     
     return extractActionSequence(model, ALL_ACTIONS)
 
 def depthLimitedPlan(problem, initial_expr_list, depth):
     (gx,gy) = problem.getGoalState()
-    goal_state_axioms = []
 
-    for t in range(1, depth):
+    #for t in range(1, depth):
+    for t in range(depth,depth+1):
 
       # UPDATE goal state axioms
       updatePositionPlanGoalStates(goal_state_axioms, gx, gy, t)
@@ -273,14 +277,18 @@ def depthLimitedPlan(problem, initial_expr_list, depth):
 	  updatePositionPlanSuccStates(initial_expr_list,i,j,t)
 
     # ENCODE goal state axioms
-    initial_expr_list.append(exactlyOne(goal_state_axioms))
-    model = logic.pycoSAT(initial_expr_list)
+    copy = [logic.expr(s) for s in initial_expr_list]
+    #initial_expr_list.append(exactlyOne(goal_state_axioms))
+    copy.append(exactlyOne(goal_state_axioms))
+    #model = logic.pycoSAT(initial_expr_list)
+    model = logic.pycoSAT(copy)
     return model 
 
 def updatePositionPlanGoalStates(goal_state_list,gx,gy,t):
   goal_state_list.append(PSE("P", gx, gy, t))
 
 def updatePositionPlanSuccStates(expr_list,i,j,t):
+
   if P(i,j,t) not in pos_succ_state_dict:
     pos_succ_state_dict[P(i,j,t)] = CNF(
 	P(i,j,t) % \
