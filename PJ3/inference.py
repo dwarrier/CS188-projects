@@ -360,18 +360,6 @@ class ParticleFilter(InferenceModule):
         a belief distribution.
         """
         "*** YOUR CODE HERE ***"
-        '''
-        newParticles = []
-        for oldParticle in self.particles:
-            newParticle = list(oldParticle) # A list of ghost positions
-            # now loop through and update each entry in newParticle...
-
-            "*** YOUR CODE HERE ***"
-
-            "*** END YOUR CODE HERE ***"
-            newParticles.append(tuple(newParticle))
-        self.particles = newParticles
-	'''
         pacmanPosition = gameState.getPacmanPosition()
 
         weights = util.Counter()
