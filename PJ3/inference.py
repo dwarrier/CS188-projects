@@ -322,7 +322,6 @@ class ParticleFilter(InferenceModule):
         weights = util.Counter()
         total = 0
         for i in range(0,self.numParticles):
-            # print(i)
             key = self.particles[i]
             distance = util.manhattanDistance(pacmanPosition,self.particles[i])
             value = emissionModel[distance]
@@ -363,27 +362,27 @@ class ParticleFilter(InferenceModule):
         pacmanPosition = gameState.getPacmanPosition()
 
         weights = util.Counter()
-	total = 0;
-	# Use a counts array to avoid extra calls to getPositionDistribution()
-	counts = util.Counter()
+        total = 0;
+        # Use a counts array to avoid extra calls to getPositionDistribution()
+        counts = util.Counter()
 
-	for oldPos in self.particles:
-	  counts[oldPos] += 1
-	for oldPos, count in counts.items():
-          newPosDist = self.getPositionDistribution(self.setGhostPosition(gameState, oldPos))
-	  for pos, prob in newPosDist.items():
-	    weights[pos] += count*prob
-	    total += count*prob
+        for oldPos in self.particles:
+            counts[oldPos] += 1
+        for oldPos, count in counts.items():
+            newPosDist = self.getPositionDistribution(self.setGhostPosition(gameState, oldPos))
+            for pos, prob in newPosDist.items():
+                weights[pos] += count*prob
+                total += count*prob
 
-        # if all weights are 0
-        if total == 0:
-            self.initializeUniformly(gameState)
-            return
+            # if all weights are 0
+            if total == 0:
+                self.initializeUniformly(gameState)
+                return
 
-	items = sorted(weights.items())
-	distribution = [i[1] for i in items]
-	values = [i[0] for i in items]
-	self.particles = util.nSample(distribution,values,self.numParticles)
+        items = sorted(weights.items())
+        distribution = [i[1] for i in items]
+        values = [i[0] for i in items]
+        self.particles = util.nSample(distribution,values,self.numParticles)
 
     def getBeliefDistribution(self):
         """
@@ -469,6 +468,28 @@ class JointParticleFilter:
         weight with each position) is incorrect and may produce errors.
         """
         "*** YOUR CODE HERE ***"
+        permutations = list(itertools.product(self.legalPositions, repeat = self.numGhosts))
+        random.shuffle(permutations)
+
+        filteredPermutations  = []
+        for tup in permutations:
+            repeat = False
+            for i in range(0,self.numGhosts):
+                if tup[i] in tup[i+1:]:
+                    repeat = True
+                    break
+            if not repeat:
+                filteredPermutations.append(tup)
+
+        self.particles = []
+        N = self.numParticles
+        i = 0
+        while N != 0:
+            if i == len(filteredPermutations):
+                i = 0
+            self.particles.append(filteredPermutations[i])
+            N -= 1
+            i += 1
 
     def addGhostAgent(self, agent):
         """
@@ -516,6 +537,43 @@ class JointParticleFilter:
         emissionModels = [busters.getObservationDistribution(dist) for dist in noisyDistances]
 
         "*** YOUR CODE HERE ***"
+        # if ghost is captured
+        for i in range(self.numGhosts):
+            if noisyDistances[i] == None:
+                for j in range(0,self.numParticles):
+                    particle = self.particles[j]
+                    self.particles[j] = self.getParticleWithGhostInJail(particle,i)
+                return
+
+        # weight according to evidence
+        weights = util.Counter()
+        total = 0
+        for j in range(0,self.numParticles):
+            key = self.particles[j]
+            value = 1
+            for i in range(0,self.numGhosts):
+                distance = util.manhattanDistance(pacmanPosition,key[i])
+                weight = emissionModels[i][distance]
+                value = value * weight
+            weights[key] += value
+            total += value
+
+        # if all weights are 0
+        if total == 0:
+            self.initializeParticles()
+            return
+
+        # normalize weights
+        norm = util.Counter()
+        for particle, weight in weights.items():
+            key = particle
+            value = weight/total
+            norm[key] = value
+
+        # resample with new weights
+        for j in range(0,self.numParticles):
+            self.particles[j] = util.sample(norm)
+
 
     def getParticleWithGhostInJail(self, particle, ghostIndex):
         """
@@ -583,7 +641,11 @@ class JointParticleFilter:
 
     def getBeliefDistribution(self):
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        beliefDistribution = util.Counter()
+        for particle in self.particles:
+            beliefDistribution[particle] += 1.0/self.numParticles
+        return beliefDistribution
+        
 
 # One JointInference module is shared globally across instances of MarginalInference
 jointInference = JointParticleFilter()
