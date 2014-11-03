@@ -360,7 +360,30 @@ class ParticleFilter(InferenceModule):
         a belief distribution.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        pacmanPosition = gameState.getPacmanPosition()
+
+        weights = util.Counter()
+	total = 0;
+	# Use a counts array to avoid extra calls to getPositionDistribution()
+	counts = util.Counter()
+
+	for oldPos in self.particles:
+	  counts[oldPos] += 1
+	for oldPos, count in counts.items():
+          newPosDist = self.getPositionDistribution(self.setGhostPosition(gameState, oldPos))
+	  for pos, prob in newPosDist.items():
+	    weights[pos] += count*prob
+	    total += count*prob
+
+        # if all weights are 0
+        if total == 0:
+            self.initializeUniformly(gameState)
+            return
+
+	items = sorted(weights.items())
+	distribution = [i[1] for i in items]
+	values = [i[0] for i in items]
+	self.particles = util.nSample(distribution,values,self.numParticles)
 
     def getBeliefDistribution(self):
         """
