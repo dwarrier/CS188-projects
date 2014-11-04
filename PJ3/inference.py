@@ -542,6 +542,8 @@ class JointParticleFilter:
             if noisyDistances[i] == None:
                 for j in range(0,self.numParticles):
                     particle = self.particles[j]
+                    # particle[i] = self.getJailPosition(i)
+                    # self.particles[j] = tuple(particle)
                     self.particles[j] = self.getParticleWithGhostInJail(particle,i)
                 return
 
@@ -634,7 +636,10 @@ class JointParticleFilter:
             # now loop through and update each entry in newParticle...
 
             "*** YOUR CODE HERE ***"
-
+            prevGhostPositions = newParticle
+            for i in range(self.numGhosts):
+                newPosDist = getPositionDistributionForGhost(setGhostPositions(gameState, prevGhostPositions),i,self.ghostAgents[i])
+                newParticle[i] = util.sample(newPosDist)
             "*** END YOUR CODE HERE ***"
             newParticles.append(tuple(newParticle))
         self.particles = newParticles
