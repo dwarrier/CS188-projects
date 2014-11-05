@@ -540,12 +540,9 @@ class JointParticleFilter:
         # if ghost is captured
         for i in range(self.numGhosts):
             if noisyDistances[i] == None:
-                for j in range(0,self.numParticles):
+                for j in range(self.numParticles):
                     particle = self.particles[j]
-                    # particle[i] = self.getJailPosition(i)
-                    # self.particles[j] = tuple(particle)
                     self.particles[j] = self.getParticleWithGhostInJail(particle,i)
-                return
 
         # weight according to evidence
         weights = util.Counter()
@@ -554,9 +551,10 @@ class JointParticleFilter:
             key = self.particles[j]
             value = 1
             for i in range(0,self.numGhosts):
-                distance = util.manhattanDistance(pacmanPosition,key[i])
-                weight = emissionModels[i][distance]
-                value = value * weight
+                if noisyDistances[i] != None:
+                    distance = util.manhattanDistance(pacmanPosition,key[i])
+                    weight = emissionModels[i][distance]
+                    value = value * weight
             weights[key] += value
             total += value
 
