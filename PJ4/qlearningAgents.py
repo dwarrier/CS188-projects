@@ -53,7 +53,7 @@ class QLearningAgent(ReinforcementAgent):
           or the Q node value otherwise
         """
         "*** YOUR CODE HERE ***"
-	if (state,action) not in qvalues.keys():
+	if (state,action) not in self.qvalues.keys():
 	  return 0.0
 	return self.qvalues[(state,action)]
 
@@ -68,7 +68,7 @@ class QLearningAgent(ReinforcementAgent):
 	# max can't handle an empty list.
 	if len(self.getLegalActions(state)) == 0:
 	  return 0.0
-	return max([getQValue(s,a) for a in self.getLegalActions(state)])
+	return max([self.getQValue(state,a) for a in self.getLegalActions(state)])
 
     def computeActionFromQValues(self, state):
         """
@@ -83,7 +83,7 @@ class QLearningAgent(ReinforcementAgent):
 	actions = random.sample(legals, len(legals))
 	if len(actions) == 0:
 	  return None
-	return max(actions, key= lambda a : getQValue(state,a))
+	return max(actions, key= lambda a : self.getQValue(state,a))
 
     def getAction(self, state):
         """
@@ -118,8 +118,7 @@ class QLearningAgent(ReinforcementAgent):
           it will be called on your behalf
         """
         "*** YOUR CODE HERE ***"
-	q + alpha(reward + gamma * max_action(qsa) - q)
-	q = getQValue(state,action)
+	q = self.getQValue(state,action)
 	a = self.alpha
 	g = self.discount
 	self.qvalues[(state,action)] = q + a*(reward + g*self.computeValueFromQValues(nextState)- q)
