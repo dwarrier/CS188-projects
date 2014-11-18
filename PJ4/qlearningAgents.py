@@ -44,7 +44,7 @@ class QLearningAgent(ReinforcementAgent):
 
         "*** YOUR CODE HERE ***"
         # maps (state, action) pairs to Q values
-        self.qvalues = dict()
+        self.qvalues = Counter()
 
     def getQValue(self, state, action):
         """
@@ -53,8 +53,6 @@ class QLearningAgent(ReinforcementAgent):
           or the Q node value otherwise
         """
         "*** YOUR CODE HERE ***"
-	if (state,action) not in self.qvalues.keys():
-	  return 0.0
 	return self.qvalues[(state,action)]
 
     def computeValueFromQValues(self, state):
