@@ -77,45 +77,59 @@ def enhancedFeatureExtractorDigit(datum):
     features =  basicFeatureExtractorDigit(datum)
 
     "*** YOUR CODE HERE ***"
-    # Calculate number of contiguous whitespace areas
-    # Either 1, 2, 3, or more
-
-    # Iterate through matrix.
-    # If a pixel has a white neighbor,
-    # mark the pixel in same group
-    # else, increment num groups and
-    # set pixel to that group
-    features = util.Counter()
-
-    # Unseen pixels have group number 0
-    groups = util.Counter()
-    group_num = 0
-    for x in range(DIGIT_DATUM_WIDTH):
-      for y in range(DIGIT_DATUM_HEIGHT):
-	# if pixel is white (leave others unseen)
-	if datum.getPixel(x, y) <= 0:
-	  # get group number of neighbors
-	  # (must be consistent!)
-	  neighbor_num = getNeighborNum(groups,x,y)
-	  # if neighbor_num is 0
-	  if not neighbor_num:
-	    group_num += 1
-	    groups[(x,y)] = group_num
-	  else:
-	    groups[(x,y)] = neighbor_num
+    num_areas = get_num_white_areas(datum)
     
     # Encode number of white areas as 1, 2, 3, or none of these.
     # 001
     # 010
     # 001
-    lower_mask = 0b111
-    areas = group_num & lower_mask
+    lower_mask = 0b1111
+    areas = num_areas & lower_mask
     features['one_area'] = areas & 1
-    features['two_areas'] = areas & 2 
+    features['two_areas'] = areas & 2
     features['three_areas'] = areas & 3 
-    features['more_areas'] = (areas == 0)
+    features['four_areas'] = areas & 4
+    features['five_areas'] = areas & 5
+    features['six_areas'] = areas & 6
 
     return features
+
+def get_num_white_areas(datum):
+  LIFO = []
+  white_spaces = 0
+  pixels = [(x,y) for x in range(DIGIT_DATUM_WIDTH) \
+      for y in range(DIGIT_DATUM_HEIGHT)]
+
+  # First take out 'on' pixels
+  for x in range(DIGIT_DATUM_WIDTH):
+    for y in range(DIGIT_DATUM_HEIGHT):
+      if datum.getPixel(x,y) > 0:
+	pixels.remove((x,y))
+
+  # Group contiguous pixels
+  while pixels:
+    # Grab a pixel
+    LIFO.append(pixels[-1])
+    while LIFO:
+      # Get an element
+      x, y = LIFO.pop()
+      # Append pixel's neighbors
+      for i in [-1,0,1]:
+	for j in [-1,0,1]:
+	  # Don't allow diagonal neighbors
+	  cross_check = (abs(i) ^ abs(j))
+	  # TODO: is this fast enough?
+	  pos = (x+i, y+j)
+	  if cross_check and pos in pixels and (pos not in LIFO):
+	    LIFO.append(pos)
+      # Update pixels
+      #print (x,y)
+      #print (14, 10) in pixels
+      pixels.remove((x,y))
+    # Update white areas found
+    white_spaces += 1
+
+  return white_spaces
 
 def getNeighborNum(checklist,x,y):
   for i in [-1,0,1]:
@@ -131,6 +145,7 @@ def getNeighborNum(checklist,x,y):
 def isValidPixel(x,y):
   return x in range(DIGIT_DATUM_WIDTH) and \
       y in range(DIGIT_DATUM_HEIGHT)
+
 
 def basicFeatureExtractorPacman(state):
     """
