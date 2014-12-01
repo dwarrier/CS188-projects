@@ -77,10 +77,74 @@ def enhancedFeatureExtractorDigit(datum):
     features =  basicFeatureExtractorDigit(datum)
 
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    num_areas = get_num_white_areas(datum)
+    
+    # Encode number of white areas as 1, 2, 3, or none of these.
+    # 001
+    # 010
+    # 001
+    lower_mask = 0b1111
+    areas = num_areas & lower_mask
+    features['one_area'] = areas & 1
+    features['two_areas'] = areas & 2
+    features['three_areas'] = areas & 3 
+    features['four_areas'] = areas & 4
+    features['five_areas'] = areas & 5
+    features['six_areas'] = areas & 6
 
     return features
 
+def get_num_white_areas(datum):
+  LIFO = []
+  white_spaces = 0
+  pixels = [(x,y) for x in range(DIGIT_DATUM_WIDTH) \
+      for y in range(DIGIT_DATUM_HEIGHT)]
+
+  # First take out 'on' pixels
+  for x in range(DIGIT_DATUM_WIDTH):
+    for y in range(DIGIT_DATUM_HEIGHT):
+      if datum.getPixel(x,y) > 0:
+	pixels.remove((x,y))
+
+  # Group contiguous pixels
+  while pixels:
+    # Grab a pixel
+    LIFO.append(pixels[-1])
+    while LIFO:
+      # Get an element
+      x, y = LIFO.pop()
+      # Append pixel's neighbors
+      for i in [-1,0,1]:
+	for j in [-1,0,1]:
+	  # Don't allow diagonal neighbors
+	  cross_check = (abs(i) ^ abs(j))
+	  # TODO: is this fast enough?
+	  pos = (x+i, y+j)
+	  if cross_check and pos in pixels and (pos not in LIFO):
+	    LIFO.append(pos)
+      # Update pixels
+      #print (x,y)
+      #print (14, 10) in pixels
+      pixels.remove((x,y))
+    # Update white areas found
+    white_spaces += 1
+
+  return white_spaces
+
+def getNeighborNum(checklist,x,y):
+  for i in [-1,0,1]:
+    for j in [-1,0,1]:
+      newx, newy = x+i, y+j
+      # Ignores diagonal neighbors
+      if isValidPixel(newx,newy) and (abs(i) ^ abs(j)):
+	neighbor_num = checklist[(newx,newy)]
+	if neighbor_num > 0:
+	  return neighbor_num
+  return 0
+
+def isValidPixel(x,y):
+  return x in range(DIGIT_DATUM_WIDTH) and \
+      y in range(DIGIT_DATUM_HEIGHT)
 
 
 def basicFeatureExtractorPacman(state):
