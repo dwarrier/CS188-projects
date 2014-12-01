@@ -77,11 +77,60 @@ def enhancedFeatureExtractorDigit(datum):
     features =  basicFeatureExtractorDigit(datum)
 
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # Calculate number of contiguous whitespace areas
+    # Either 1, 2, 3, or more
+
+    # Iterate through matrix.
+    # If a pixel has a white neighbor,
+    # mark the pixel in same group
+    # else, increment num groups and
+    # set pixel to that group
+    features = util.Counter()
+
+    # Unseen pixels have group number 0
+    groups = util.Counter()
+    group_num = 0
+    for x in range(DIGIT_DATUM_WIDTH):
+      for y in range(DIGIT_DATUM_HEIGHT):
+	# if pixel is white (leave others unseen)
+	if datum.getPixel(x, y) <= 0:
+	  # get group number of neighbors
+	  # (must be consistent!)
+	  neighbor_num = getNeighborNum(groups,x,y)
+	  # if neighbor_num is 0
+	  if not neighbor_num:
+	    group_num += 1
+	    groups[(x,y)] = group_num
+	  else:
+	    groups[(x,y)] = neighbor_num
+    
+    # Encode number of white areas as 1, 2, 3, or none of these.
+    # 001
+    # 010
+    # 001
+    lower_mask = 0b111
+    areas = group_num & lower_mask
+    features['one_area'] = areas & 1
+    features['two_areas'] = areas & 2 
+    features['three_areas'] = areas & 3 
+    features['more_areas'] = (areas == 0)
 
     return features
 
+def getNeighborNum(checklist,x,y):
+  for i in [-1,0,1]:
+    for j in [-1,0,1]:
+      newx, newy = x+i, y+j
+      # Ignores diagonal neighbors
+      if isValidPixel(newx,newy) and (abs(i) ^ abs(j)):
+	neighbor_num = checklist[(newx,newy)]
+	if neighbor_num > 0:
+	  return neighbor_num
+  return 0
 
+def isValidPixel(x,y):
+  return x in range(DIGIT_DATUM_WIDTH) and \
+      y in range(DIGIT_DATUM_HEIGHT)
 
 def basicFeatureExtractorPacman(state):
     """
