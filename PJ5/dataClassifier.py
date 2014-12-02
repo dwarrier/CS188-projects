@@ -74,7 +74,7 @@ def enhancedFeatureExtractorDigit(datum):
     - Number of contiguous whitespaces. Does a
       modified depth first search to count the
       number of these areas, and then encodes
-      them in a binary format from 1 - 6 areas
+      them in a binary format from 1 - MAX_AREAS areas
     ##
     """
     features =  basicFeatureExtractorDigit(datum)
@@ -82,7 +82,7 @@ def enhancedFeatureExtractorDigit(datum):
     "*** YOUR CODE HERE ***"
     num_areas = get_num_white_areas(datum)
 
-    # Returns a list of {0, 1}  
+    # Returns a list containing {0, 1}  
     # with length elements
     # to use in binary encoding
     def encode_num(num, length):
@@ -203,7 +203,7 @@ def enhancedPacmanFeatures(state, action):
     foodPositions = [(fx,fy) \
 	for fx in range(grid_w) \
 	for fy in range(grid_h) \
-	if successor.hasFood(fx,fy) and withinRadius((x,y),(fx,fy),F_S)]
+	if successor.hasFood(fx,fy) and withinRadius((x,y),(fx,fy),F_R)]
     for p in foodPositions:
       features[str(p)] = 1.0/ (util.manhattanDistance((x,y),p))
 
