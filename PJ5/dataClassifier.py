@@ -127,8 +127,10 @@ def get_num_white_areas(datum):
       for i in [-1,0,1]:
 	for j in [-1,0,1]:
 	  # Don't allow diagonal neighbors
-	  cross_check = (abs(i) ^ abs(j))
-	  # TODO: is this fast enough?
+	  # If we don't use this we actually get a better score!
+	  # 85/100 without vs 85/100 with
+	  #cross_check = (abs(i) ^ abs(j))
+	  cross_check = i or j 
 	  pos = (x+i, y+j)
 	  if cross_check and pos in pixels_set and (pos not in LIFO_set):
 	    LIFO.append(pos)
