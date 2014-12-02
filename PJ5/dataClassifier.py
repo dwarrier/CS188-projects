@@ -71,26 +71,29 @@ def enhancedFeatureExtractorDigit(datum):
     for this datum (datum is of type samples.Datum).
 
     ## DESCRIBE YOUR ENHANCED FEATURES HERE...
-
+    - Number of contiguous whitespaces. Does a
+      modified depth first search to count the
+      number of these areas, and then encodes
+      them in a binary format from 1 - MAX_AREAS areas
     ##
     """
     features =  basicFeatureExtractorDigit(datum)
 
     "*** YOUR CODE HERE ***"
     num_areas = get_num_white_areas(datum)
+
+    # Returns a list containing {0, 1}  
+    # with length elements
+    # to use in binary encoding
+    def encode_num(num, length):
+      assert 0 < num <= length, "num must be in range(length)"
+      return [0 if n != num else 1 for n in range(1,length+1)]
     
-    # Encode number of white areas as 1, 2, 3, or none of these.
-    # 001
-    # 010
-    # 001
-    lower_mask = 0b1111
-    areas = num_areas & lower_mask
-    features['one_area'] = areas & 1
-    features['two_areas'] = areas & 2
-    features['three_areas'] = areas & 3 
-    features['four_areas'] = areas & 4
-    features['five_areas'] = areas & 5
-    features['six_areas'] = areas & 6
+    # perform binary encoding for number of areas
+    MAX_AREAS = 10 # this is arbitrary, just needs to be large enough
+    area_codes = encode_num(num_areas, MAX_AREAS)
+    for i in range(MAX_AREAS):
+      features['areas_{0}'.format(i+1)] = area_codes[i]
 
     return features
 
@@ -123,25 +126,25 @@ def get_num_white_areas(datum):
 	  if cross_check and pos in pixels and (pos not in LIFO):
 	    LIFO.append(pos)
       # Update pixels
-      #print (x,y)
-      #print (14, 10) in pixels
       pixels.remove((x,y))
     # Update white areas found
     white_spaces += 1
 
   return white_spaces
 
-def getNeighborNum(checklist,x,y):
+# Not currently used
+def getNeighborNum(datum,check, x,y):
+  neighborNum = 0
   for i in [-1,0,1]:
     for j in [-1,0,1]:
       newx, newy = x+i, y+j
       # Ignores diagonal neighbors
       if isValidPixel(newx,newy) and (abs(i) ^ abs(j)):
-	neighbor_num = checklist[(newx,newy)]
-	if neighbor_num > 0:
-	  return neighbor_num
-  return 0
+	if check:
+	  neighborNum += 1
+  return neighborNum 
 
+# Not currently used
 def isValidPixel(x,y):
   return x in range(DIGIT_DATUM_WIDTH) and \
       y in range(DIGIT_DATUM_HEIGHT)
@@ -187,8 +190,34 @@ def enhancedPacmanFeatures(state, action):
     """
     features = util.Counter()
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    grid_w = state.data.layout.width
+    grid_h = state.data.layout.height
+    successor = state.generateSuccessor(0,action)
+    x, y = successor.getPacmanPosition()
+
+    def withinRadius(p1, p2,radius):
+      return util.manhattanDistance(p1,p2) <= radius
+   
+    F_R = 2 
+    # encode distances to all current food in radius F_R
+    foodPositions = [(fx,fy) \
+	for fx in range(grid_w) \
+	for fy in range(grid_h) \
+	if successor.hasFood(fx,fy) and withinRadius((x,y),(fx,fy),F_R)]
+    for p in foodPositions:
+      features[str(p)] = 1.0/ (util.manhattanDistance((x,y),p))
+
+    G_R = 2 
+    # encode distances to all current ghosts in radius G_R
+    ghostPositions = [p for p in successor.getGhostPositions()\
+	if withinRadius((x,y),p,G_R)]
+    for p in ghostPositions:
+      dist = util.manhattanDistance((x,y),p)
+      features["ghost"+str(p)] = 1.0/util.manhattanDistance((x,y),p) \
+	  if dist else 1
+
     return features
+
 
 
 def contestFeatureExtractorDigit(datum):
