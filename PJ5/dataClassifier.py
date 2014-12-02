@@ -123,8 +123,6 @@ def get_num_white_areas(datum):
 	  if cross_check and pos in pixels and (pos not in LIFO):
 	    LIFO.append(pos)
       # Update pixels
-      #print (x,y)
-      #print (14, 10) in pixels
       pixels.remove((x,y))
     # Update white areas found
     white_spaces += 1
@@ -187,8 +185,125 @@ def enhancedPacmanFeatures(state, action):
     """
     features = util.Counter()
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    G_S = 1 
+    F_S = 1 
+    grid_w = state.data.layout.width
+    grid_h = state.data.layout.height
+    successor = state.generateSuccessor(0,action)
+    px, py = state.getPacmanPosition()
+    x, y = successor.getPacmanPosition()
+    ghostPositions = successor.getGhostPositions()
+
+    def isValidGridPos(x,y):
+      return x in range(grid_w) and y in range(grid_h)
+
+    '''
+    # Encode distances to all ghosts
+    ghostPositions = successor.getGhostPositions()
+    closest = min([util.manhattanDistance((x,y), p) \
+	for p in ghostPositions])
+    for i in range(len(ghostPositions)):
+      dist = util.manhattanDistance((x,y), ghostPositions[i])
+      features['DistToGhost{0}'.format(i)] = -dist if dist else 0
+    '''
+
+    '''
+    # Encode distance to closest food
+    foodPositions = [(x,y) \
+	for x in range(grid_w) \
+	for y in range(grid_h) \
+	if successor.hasFood(x,y)]
+    foodDists = [(p,util.manhattanDistance((x,y),p)) for p in foodPositions]
+    if not foodPositions:
+      closestFood = [(x,y), 0]
+    else: 
+      closestFood = min(foodPositions,key=lambda p : p[1])
+    features['closestFoodDist'] = 1.0/closestFood[1] \
+	if closestFood[1] else 1
+    '''
+
+    '''
+    # Encode distance to furthest food
+    foodPositions = [(x,y) \
+	for x in range(grid_w) \
+	for y in range(grid_h) \
+	if successor.hasFood(x,y)]
+    foodDists = [(p,util.manhattanDistance((x,y),p)) for p in foodPositions]
+    if not foodPositions:
+      furthestFood = [(x,y), 0]
+    else: 
+      furthestFood = max(foodPositions,key=lambda p : p[1])
+    features['furthestFoodDist'] = 1.0/furthestFood[1] \
+	if furthestFood[1] else 0 
+    '''
+
+    def withinRadius(p1, p2,radius):
+      return util.manhattanDistance(p1,p2) <= radius
+   
+    F_R = 2 
+    # encode distances to all current food in radius F_R
+    foodPositions = [(fx,fy) \
+	for fx in range(grid_w) \
+	for fy in range(grid_h) \
+	if successor.hasFood(fx,fy) and withinRadius((x,y),(fx,fy),F_S)]
+    for p in foodPositions:
+      features[str(p)] = 1.0/ (util.manhattanDistance((x,y),p))
+
+    G_R = 2 
+    # encode distances to all ghosts
+    ghostPositions = [p for p in successor.getGhostPositions()\
+	if withinRadius((x,y),p,G_R)]
+    for p in ghostPositions:
+      dist = util.manhattanDistance((x,y),p)
+      features["ghost"+str(p)] = 1.0/util.manhattanDistance((x,y),p) \
+	  if dist else 1
+
+    '''
+    # Count how many ghosts are within G_S squares of pacman
+    ghostPositions = successor.getGhostPositions()
+    numGhosts = 0
+    for i in [-G_S, 0, G_S]:
+      for j in [-G_S, 0, G_S]:
+	cross_check = (abs(i) ^ abs(j)) > 0
+	newPos = (x+i, y+j)
+	if cross_check and isValidGridPos(x+i,y+j) and (newPos in ghostPositions):
+	  numGhosts += 1
+    # Encode into features
+    features['nearbyGhosts'] = numGhosts
+
+    # Count how many food pellets are within F_S squares of pacman
+    numFood = 0
+    for i in [-F_S, 0, F_S]:
+      for j in [-F_S, 0, F_S]:
+	cross_check = (abs(i) ^ abs(j)) > 0
+	newPos = (x+i, y+j)
+	if cross_check and isValidGridPos(x+i,y+j) and successor.hasFood(x+i,y+j):
+	  numFood += 1
+    # Encode into features
+    features['nearbyFood'] = numFood
+    '''
+
+    '''
+    # Count number of walls around pacman
+    numWalls = 0
+    for i in [-1, 0, 1]:
+      for j in [-1, 0, 1]:
+	cross_check = (abs(i) ^ abs(j)) > 0
+	newPos = (x+i, y+j)
+	if cross_check and isValidGridPos(x+i,y+j) and state.hasWall(x+i,y+j):
+	  numWalls += 1
+    # Encode into features
+    features['numWalls'] = -1*numWalls
+    '''
+
+    '''
+    # Check whether a food pellet was eaten
+    check = successor.getNumFood() < state.getNumFood()
+    features['foodEaten'] = 1 if check else -1
+    '''
+
     return features
+
 
 
 def contestFeatureExtractorDigit(datum):
