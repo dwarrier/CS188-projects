@@ -99,34 +99,45 @@ def enhancedFeatureExtractorDigit(datum):
 
 def get_num_white_areas(datum):
   LIFO = []
+  # Speed up LIFO membership checks
+  LIFO_set = set()
   white_spaces = 0
   pixels = [(x,y) for x in range(DIGIT_DATUM_WIDTH) \
       for y in range(DIGIT_DATUM_HEIGHT)]
+  # Speed up pixels membership checks
+  pixels_set = set(pixels)
 
   # First take out 'on' pixels
   for x in range(DIGIT_DATUM_WIDTH):
     for y in range(DIGIT_DATUM_HEIGHT):
       if datum.getPixel(x,y) > 0:
 	pixels.remove((x,y))
+	pixels_set.remove((x,y))
 
   # Group contiguous pixels
   while pixels:
     # Grab a pixel
     LIFO.append(pixels[-1])
+    LIFO_set.add(pixels[-1])
     while LIFO:
       # Get an element
       x, y = LIFO.pop()
+      LIFO_set.remove((x,y))
       # Append pixel's neighbors
       for i in [-1,0,1]:
 	for j in [-1,0,1]:
 	  # Don't allow diagonal neighbors
-	  cross_check = (abs(i) ^ abs(j))
-	  # TODO: is this fast enough?
+	  # If we don't use this we actually get a better score!
+	  # 85/100 without vs 85/100 with
+	  #cross_check = (abs(i) ^ abs(j))
+	  cross_check = i or j 
 	  pos = (x+i, y+j)
-	  if cross_check and pos in pixels and (pos not in LIFO):
+	  if cross_check and pos in pixels_set and (pos not in LIFO_set):
 	    LIFO.append(pos)
+	    LIFO_set.add(pos)
       # Update pixels
       pixels.remove((x,y))
+      pixels_set.remove((x,y))
     # Update white areas found
     white_spaces += 1
 
